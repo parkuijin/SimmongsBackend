@@ -13,12 +13,12 @@ public class BOMController {
     private final BOMRepository bomRepository;
 
     @PostMapping("registration") // BOM 정보 등록
-    public BOM BOMRegistration(@RequestBody BOM bom){
-        return bomRepository.save(bom);
+    public BOMs BOMRegistration(@RequestBody BOMs BOMs){
+        return bomRepository.save(BOMs);
     }
 
     @GetMapping("showAll") // BOM 전체 조회
-    public List<BOM> ShowAllBOM(){
+    public List<BOMs> ShowAllBOM(){
         return bomRepository.findAll();
     }
 }

@@ -11,7 +11,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // 기본 생성자 어노테이션
 @Entity(name = "bom")
-public class BOM {
+public class BOMs {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long bom_id;
@@ -21,7 +21,7 @@ public class BOM {
     private String child_product_code;
     private int bom_amount;
 
-    public BOM(String bom_code, String product_code, String child_product_code, int bom_amount) {
+    public BOMs(String bom_code, String product_code, String child_product_code, int bom_amount) {
         this.bom_code = bom_code;
         this.product_code = product_code;
         this.child_product_code = child_product_code;
