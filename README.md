@@ -1,37 +1,51 @@
 # SimmongsBackend
 
 ## 🖥️ 프로젝트 소개
-생산관리 ERP 웹사이트의 백엔드 부분입니다.
+
 <br>
 <br>
 
 ## 📌 구현 기능
 
-### [재고, 제품, 부품]
+### [Product]
 
-### Request
-
-#### 재고등록
+#### 재고 등록
 
 `Post /products/registration`
 
     {
-    "product_code":"",
-    "product_name":"",
-    "product_amount":,
-    "product_unit":"",
-    "product_type": "",
+        "product_code" : " ",
+        "product_name" : " ",
+        "product_amount" :  ,
+        "product_unit" : " ",
+        "product_type" : " ",
+        "product_creation_date" : " "
     }
 
 <br>
-
-### Response
 
 #### 재고 전체 조회
 
 `GET /products/showAll`
 
 <br>
+
+#### 재고 조건 검색
+
+`GET /products/search?product_code=[ ]&product_name=[ ]&product_unit=[ ]&product_type=[ ]&product_start_date=[ ]&product_end_date=[ ]`
+
+|Key|Value|Description|
+|---|---|---|
+|product_code|||
+|product_name|||
+|product_unit|||
+|product_type|||
+|product_start_date|||
+|product_end_date|||
+
+<br>
 <br>
 
 ### [BOM]
+
+<br>
