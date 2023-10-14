@@ -1,8 +1,10 @@
 package com.simmongs.product;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 
 @Getter
 @Builder // 객체 생성은 Setter 대신 Builder
@@ -12,16 +14,18 @@ import lombok.*;
 public class Products { // 데이터를 저장할 Entity Class
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long product_id;
+    @Column(nullable = false)
+    private Long product_id; // id
 
     private String product_code;
     private String product_name;
     private int product_amount;
     private String product_unit;
     private String product_type;
-    private String product_creation_date;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime product_creation_date;
 
-    public Products(String product_code, String product_name, int product_amount, String product_unit, String product_type, String product_creation_date){
+    public Products(String product_code, String product_name, int product_amount, String product_unit, String product_type, LocalDateTime product_creation_date){
         this.product_code = product_code;
         this.product_name = product_name;
         this.product_amount = product_amount;
@@ -29,4 +33,5 @@ public class Products { // 데이터를 저장할 Entity Class
         this.product_type = product_type;
         this.product_creation_date = product_creation_date;
     }
+
 }
