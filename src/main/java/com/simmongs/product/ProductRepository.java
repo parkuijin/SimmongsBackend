@@ -14,13 +14,13 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
             select 
                 * 
             from 
-                product 
+                PRODUCT_TB
             where 
-                product_code = :product_code 
-                and product_name = :product_name 
-                and product_unit = :product_unit 
-                and product_type = :product_type 
-                and product_creation_date between :product_start_date and :product_end_date
+                PRODUCT_CODE = :product_code 
+                and PRODUCT_NAME = :product_name 
+                and PRODUCT_UNIT = :product_unit 
+                and PRODUCT_TYPE = :product_type 
+                and PRODUCT_CREATION_DATE between :product_start_date and :product_end_date
             """, nativeQuery = true)
     List<Products> findSearchProduct(
             @Param("product_code") String product_code

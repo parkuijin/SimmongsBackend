@@ -10,18 +10,29 @@ import java.time.LocalDateTime;
 @Builder // 객체 생성은 Setter 대신 Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // 기본 생성자 어노테이션
-@Entity(name = "product")
+@Entity(name = "PRODUCT_TB")
 public class Products { // 데이터를 저장할 Entity Class
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(nullable = false)
+    @Column(name = "PRODUCT_ID", nullable = false)
     private Long product_id; // id
 
+    @Column(name = "PRODUCT_CODE")
     private String product_code;
+
+    @Column(name = "PRODUCT_NAME")
     private String product_name;
+
+    @Column(name = "PRODUCT_AMOUNT", columnDefinition = "integer default 0")
     private int product_amount;
+
+    @Column(name = "PRODUCT_UNIT")
     private String product_unit;
+
+    @Column(name = "PRODUCT_TYPE")
     private String product_type;
+
+    @Column(name = "PRODUCT_CREATION_DATE")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime product_creation_date;
 
