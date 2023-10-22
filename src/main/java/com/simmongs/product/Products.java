@@ -3,6 +3,8 @@ package com.simmongs.product;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.DynamicInsert;
 
 import java.time.LocalDateTime;
 
@@ -15,34 +17,40 @@ public class Products { // 데이터를 저장할 Entity Class
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "PRODUCT_ID", nullable = false)
-    private Long product_id; // id
+    private Long productId; // id
 
     @Column(name = "PRODUCT_CODE")
-    private String product_code;
+    private String productCode;
 
     @Column(name = "PRODUCT_NAME")
-    private String product_name;
+    private String productName;
 
-    @Column(name = "PRODUCT_AMOUNT", columnDefinition = "integer default 0")
-    private int product_amount;
+    @Column(name = "PRODUCT_AMOUNT")
+    @ColumnDefault("0")
+    private Integer productAmount;
 
     @Column(name = "PRODUCT_UNIT")
-    private String product_unit;
+    private String productUnit;
 
     @Column(name = "PRODUCT_TYPE")
-    private String product_type;
+    private String productType;
 
     @Column(name = "PRODUCT_CREATION_DATE")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime product_creation_date;
+    private LocalDateTime productCreationDate;
 
-    public Products(String product_code, String product_name, int product_amount, String product_unit, String product_type, LocalDateTime product_creation_date){
-        this.product_code = product_code;
-        this.product_name = product_name;
-        this.product_amount = product_amount;
-        this.product_unit = product_unit;
-        this.product_type = product_type;
-        this.product_creation_date = product_creation_date;
+    public Products(String productCode, String productName, Integer productAmount, String productUnit, String productType, LocalDateTime productCreationDate) {
+        this.productCode = productCode;
+        this.productName = productName;
+        this.productAmount = productAmount;
+        this.productUnit = productUnit;
+        this.productType = productType;
+        this.productCreationDate = productCreationDate;
     }
 
+    public void update(String productName, Integer productAmount, String productUnit) {
+        this.productName = productName;
+        this.productAmount = productAmount;
+        this.productUnit = productUnit;
+    }
 }

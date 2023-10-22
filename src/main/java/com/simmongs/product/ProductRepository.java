@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Products, Long> {
@@ -20,7 +21,7 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
                 and PRODUCT_NAME = :product_name 
                 and PRODUCT_UNIT = :product_unit 
                 and PRODUCT_TYPE = :product_type 
-                and PRODUCT_CREATION_DATE between :product_start_date and :product_end_date
+                and PRODUCT_CREATION_DATE between :product_start_date and :product_end_date 
             """, nativeQuery = true)
     List<Products> findSearchProduct(
             @Param("product_code") String product_code
@@ -29,5 +30,18 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
             , @Param("product_type") String product_type
             , @Param("product_start_date") String product_start_date
             , @Param("product_end_date") String product_end_date);
+
+    @Query(value = """
+            select 
+                *
+            from 
+                PRODUCT_TB
+            where
+                ( PRODUCT_CODE LIKE %:keyword% OR PRODUCT_NAME LIKE %:keyword% )
+                AND PRODUCT_TYPE = '부품'
+            """, nativeQuery = true)
+    List<Products> findSearchComponentByKeyword(@Param("keyword") String keyword);
+
+    Optional<Products> findByProductCode(String productCode);
 
 }
