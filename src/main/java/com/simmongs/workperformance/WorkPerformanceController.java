@@ -54,9 +54,13 @@ public class WorkPerformanceController {
     @GetMapping("showAll")
     public List<WorkPerformance> ShowAll() { return workPerformanceRepository.findAll(); }
 
-    @GetMapping("showWorkPerformance") // Work_Order_Id로 검색하여 작업실적 전체 조회
-    public List<WorkPerformance> ShowWorkPerformance(@RequestParam(value = "work_order_id") Long id){
-        List<WorkPerformance> workPerformanceList = workPerformanceService.findWorkOrderById(id);
+    @GetMapping("showWorkPerformance") // WorkOrderId로 검색하여 작업실적 전체 조회
+    public List<WorkPerformance> ShowWorkPerformance(@RequestBody String json){
+        JSONObject obj = new JSONObject(json);
+
+        Long workOrderId = Long.parseLong(obj.getString("workOrderId"));
+
+        List<WorkPerformance> workPerformanceList = workPerformanceService.findWorkOrderById(workOrderId);
 
         return workPerformanceList;
     }
