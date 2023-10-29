@@ -53,4 +53,8 @@ public class Products { // 데이터를 저장할 Entity Class
         this.productAmount = productAmount;
         this.productUnit = productUnit;
     }
+
+    public void amountUpdate(Integer productAmount) {
+        this.productAmount -= productAmount;
+    }
 }

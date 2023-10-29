@@ -44,4 +44,13 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
 
     Optional<Products> findByProductCode(String productCode);
 
+    @Query(value = """
+            select 
+                *
+            from 
+                PRODUCT_TB
+            where
+                PRODUCT_CODE = :productCode
+            """, nativeQuery = true)
+    Products getByProductCode(String productCode);
 }

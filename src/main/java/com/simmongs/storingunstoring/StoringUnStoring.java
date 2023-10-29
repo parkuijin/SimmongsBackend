@@ -16,33 +16,34 @@ public class StoringUnStoring {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "STORING_UNSTORING_ID", nullable = false)
-    private Long storing_unstoring_id;
+    private Long storingUnstoringId;
 
     @Column(name = "STORING_UNSTORING_DATE")
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime storing_unstoring_date;
+    private LocalDateTime storingUnstoringDate;
 
     @Column(name = "STORING_UNSTORING_TYPE")
-    private String storing_unstoring_type;
+    private String storingUnstoringType;
 
     @Column(name = "PRODUCT_CODE")
-    private String product_code;
+    private String productCode;
 
     @Column(name = "PRODUCT_NAME")
-    private String product_name;
+    private String productName;
 
     @Column(name = "PRODUCT_TYPE")
-    private String product_type;
+    private String productType;
 
     @Column(name = "STORING_UNSTORING_AMOUNT")
-    private int storing_unstoring_amount;
+    private int storingUnstoringAmount;
 
-    public StoringUnStoring(LocalDateTime storing_unstoring_date, String storing_unstoring_type, String product_code, String product_name, String product_type, int storing_unstoring_amount) {
-        this.storing_unstoring_date = storing_unstoring_date;
-        this.storing_unstoring_type = storing_unstoring_type;
-        this.product_code = product_code;
-        this.product_name = product_name;
-        this.product_type = product_type;
-        this.storing_unstoring_amount = storing_unstoring_amount;
+    public StoringUnStoring(LocalDateTime storingUnstoringDate, String storingUnstoringType, String productCode, String productName, String productType, int storingUnstoringAmount) {
+        this.storingUnstoringDate = storingUnstoringDate;
+        this.storingUnstoringType = storingUnstoringType;
+        this.productCode = productCode;
+        this.productName = productName;
+        this.productType = productType;
+        this.storingUnstoringAmount = storingUnstoringAmount;
     }
+
 }
