@@ -11,21 +11,21 @@ import lombok.*;
 public class BOMs {
 
     @Column(name = "BOM_ID")
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long bom_id;
+    @Id
+    private String bomId;
 
     @Column(name = "PRODUCT_CODE")
-    private String product_code;
+    private String productCode;
 
     @Column(name = "CHILD_PRODUCT_CODE")
-    private String child_product_code;
+    private String childProductCode;
 
     @Column(name = "BOM_AMOUNT")
-    private int bom_amount;
+    private int bomAmount;
 
     public BOMs(String product_code, String child_product_code, int bom_amount) {
-        this.product_code = product_code;
-        this.child_product_code = child_product_code;
-        this.bom_amount = bom_amount;
+        this.productCode = product_code;
+        this.childProductCode = child_product_code;
+        this.bomAmount = bom_amount;
     }
 }

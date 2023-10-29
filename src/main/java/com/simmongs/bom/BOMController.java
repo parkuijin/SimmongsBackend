@@ -1,12 +1,14 @@
 package com.simmongs.bom;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
-@RequiredArgsConstructor // Final 객체를 Constructor Injection 해준다 (Autowired 역할)
+@RequiredArgsConstructor
 @RequestMapping(value = "bom")
 public class BOMController {
 
