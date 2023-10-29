@@ -56,6 +56,10 @@ public class WorkOrderController {
                 response.put("success", false);
                 response.put("message", "해당 제품의 BOM이 등록되어 있지 않습니다.");
                 return response;
+            case -5:
+                response.put("success", false);
+                response.put("message", "부품 총필요량이 현재 재고보다 많습니다.");
+                return response;
             case 0:
                 response.put("success", true);
                 return response;

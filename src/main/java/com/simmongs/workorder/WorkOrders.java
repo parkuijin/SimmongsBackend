@@ -51,4 +51,9 @@ public class WorkOrders {
         this.workDeadline = workDeadline;
         this.workStatus = workStatus;
     }
+
+    public void workCurrentQuantityUpdate(int currentWorkLoad) {
+        this.workCurrentQuantity += currentWorkLoad;
+    }
+
 }
