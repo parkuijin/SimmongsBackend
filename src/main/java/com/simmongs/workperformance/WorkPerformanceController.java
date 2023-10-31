@@ -81,6 +81,10 @@ public class WorkPerformanceController {
                 response.put("success", false);
                 response.put("message", "이미 완료된 작업지시입니다.");
                 return response;
+            case -7:
+                response.put("success", false);
+                response.put("message", "목표 수량을 초과합니다.");
+                return response;
             case 0:
                 response.put("success", true);
                 return response;

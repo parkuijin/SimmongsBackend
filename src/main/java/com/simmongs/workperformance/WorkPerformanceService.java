@@ -65,8 +65,8 @@ public class WorkPerformanceService {
         if (workOrders.getWorkTargetQuantity() <= workOrders.getWorkCurrentQuantity())
             return -6; // 목표 수량이 이미 달성된 경우
 
-        /*if (workOrders.getWorkCurrentQuantity() + currentWorkload >= workOrders.getWorkTargetQuantity())
-            return -7; // 목표 수량 초과 제작*/
+        if (workOrders.getWorkCurrentQuantity() + currentWorkload >= workOrders.getWorkTargetQuantity())
+            return -7; // 목표 수량 초과 제작
 
         for(int i=0; i<usedProduct.length(); i++) {
 
