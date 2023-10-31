@@ -66,7 +66,7 @@ public class WorkPerformanceService {
             return -6; // 목표 수량이 이미 달성된 경우
 
         /*if (workOrders.getWorkCurrentQuantity() + currentWorkload >= workOrders.getWorkTargetQuantity())
-            return -7;*/
+            return -7; // 목표 수량 초과 제작*/
 
         for(int i=0; i<usedProduct.length(); i++) {
 
@@ -80,10 +80,14 @@ public class WorkPerformanceService {
             WorkPerformance workPerformance = new WorkPerformance(workOrderId, currentWorkload, usedProductCode, usedProductAmount, workPerformanceDate);
             workPerformanceRepository.save(workPerformance);
 
-            // 재고 개수 차감
+            // 부품 재고 개수 차감
             Products products = productRepository.getByProductCode(usedProductCode);
-            products.amountUpdate(usedProductAmount);
+            products.amountSub(usedProductAmount);
         }
+
+        // 제품 재고 개수 증가
+        Products products = productRepository.getByProductCode(workOrders.getProductCode());
+        products.amountAdd(currentWorkload);
 
         // 작업 지시의 현재 작업량 갱신
         workOrders.workCurrentQuantityUpdate(currentWorkload);
