@@ -60,6 +60,10 @@ public class WorkOrderController {
                 response.put("success", false);
                 response.put("message", "부품 총필요량이 현재 재고보다 많습니다.");
                 return response;
+            case -6:
+                response.put("success", false);
+                response.put("message", "작업지시 코드 생성이 실패했습니다.");
+                return response;
             case 0:
                 response.put("success", true);
                 return response;

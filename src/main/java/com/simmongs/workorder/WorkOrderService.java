@@ -4,14 +4,16 @@ import com.simmongs.bom.BOMRepository;
 import com.simmongs.bom.BOMs;
 import com.simmongs.department.DepartmentRepository;
 import com.simmongs.mrp.MRPRepository;
-import com.simmongs.mrp.MRPs;
 import com.simmongs.product.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
 @Transactional(readOnly = true)
@@ -46,11 +48,26 @@ public class WorkOrderService {
                     return -5; // 부품 총필요량이 현재 재고보다 적을 경우
             }
 
-        // 작업지시 등록
-        WorkOrders workOrders = new WorkOrders(departmentName, workStartDate, productCode, workTargetQuantity,workDeadline, workStatus);
-        Long workOrderId = workOrderRepository.save(workOrders).getWorkOrderId();
+        // 작업지시 코드 생성
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd");
+        Date date = Date.from(workStartDate.atZone(ZoneId.systemDefault()).toInstant());
+        String frontPartWorkOrderId = simpleDateFormat.format(date) + productCode;
+        for (int i=1; i<10000; i++) {
+            String newWorkOrderId = frontPartWorkOrderId + String.format("%05d", i);
+            if (workOrderRepository.findByWorkOrderId(newWorkOrderId).isPresent())
+                continue;
+            else if (!workOrderRepository.findByWorkOrderId(newWorkOrderId).isPresent()) {
+                if (newWorkOrderId == null) {
+                    return -6; // 작업지시 코드 생성 실패했을 경우
+                }
+                // 작업지시 등록
+                WorkOrders workOrders = new WorkOrders(newWorkOrderId, departmentName, workStartDate, productCode, workTargetQuantity, workDeadline, workStatus);
+                workOrderRepository.save(workOrders);
+                break;
+            }
+        }
 
-        // MRP 등록
+        /*// MRP 등록
         if (!boMsList.isEmpty()) {
             for (BOMs boMs : boMsList) {
                 String usedProductCode = boMs.getChildProductCode();
@@ -58,7 +75,7 @@ public class WorkOrderService {
                 MRPs mrps = new MRPs(workOrderId, usedProductCode, totalNeededProductAmount, totalNeededProductAmount );
                 mrpRepository.save(mrps);
             }
-        }
+        }*/
 
         return 0;
     }

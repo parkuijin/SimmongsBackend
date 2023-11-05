@@ -15,9 +15,8 @@ import java.time.LocalDateTime;
 public class WorkOrders {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "WORK_ORDER_ID")
-    private Long workOrderId;
+    private String workOrderId;
 
     @Column(name = "DEPARTMENT_NAME")
     private String departmentName;
@@ -43,7 +42,8 @@ public class WorkOrders {
     @Column(name = "WORK_STATUS")
     private String workStatus;
 
-    public WorkOrders(String departmentName, LocalDateTime workStartDate, String productCode, int workTargetQuantity, LocalDateTime workDeadline, String workStatus) {
+    public WorkOrders(String workOrderId, String departmentName, LocalDateTime workStartDate, String productCode, int workTargetQuantity, LocalDateTime workDeadline, String workStatus) {
+        this.workOrderId = workOrderId;
         this.departmentName = departmentName;
         this.workStartDate = workStartDate;
         this.productCode = productCode;

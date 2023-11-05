@@ -9,7 +9,7 @@ import java.util.Optional;
 @Repository
 public interface WorkOrderRepository extends JpaRepository<WorkOrders, Long> {
 
-    Optional<WorkOrders> findByWorkOrderId(Long id);
+    Optional<WorkOrders> findByWorkOrderId(String id);
 
     @Query(value = """
             select 
@@ -19,5 +19,5 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrders, Long> {
             where
                 WORK_ORDER_ID = :id
             """, nativeQuery = true)
-    WorkOrders getByWorkOrderId(Long id);
+    WorkOrders getByWorkOrderId(String id);
 }
