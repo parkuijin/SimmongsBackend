@@ -3,7 +3,7 @@ package com.simmongs.department;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Entity(name = "DEPARTMENT_DB")
+@Entity(name = "DEPARTMENT_TB")
 @Getter
 @Builder
 @AllArgsConstructor
