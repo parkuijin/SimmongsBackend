@@ -16,7 +16,9 @@ public interface WorkPerformanceRepository extends JpaRepository<WorkPerformance
             from
                 WORK_PERFORMANCE_TB
             where
-                WORK_ORDER_ID = :work_order_id
+                WORK_ORDER_ID = :WORK_ORDER_ID
             """, nativeQuery = true)
-    List<WorkPerformance> findByWorkOrderId(@Param(value = "work_order_id")Long work_order_id);
+    List<WorkPerformance> findByWorkOrderId(@Param(value = "WORK_ORDER_ID")String workOrderId);
+
+    List<WorkPerformance> findByWorkPerformanceId(@Param(value = "WORK_PERFORMANCE_ID")Long workPerformanceId);
 }

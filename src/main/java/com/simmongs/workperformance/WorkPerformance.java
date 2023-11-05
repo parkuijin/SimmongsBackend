@@ -19,7 +19,7 @@ public class WorkPerformance {
     private Long workPerformanceId;
 
     @Column(name = "WORK_ORDER_ID")
-    private Long workOrderId;
+    private String workOrderId;
 
     @Column(name = "CURRENT_WORKLOAD")
     private int currentWorkload;
@@ -34,7 +34,7 @@ public class WorkPerformance {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime workPerformanceDate;
 
-    public WorkPerformance(Long workOrderId, Integer currentWorkload, String usedProductCode, Integer usedProductAmount, LocalDateTime workPerformanceDate) {
+    public WorkPerformance(String workOrderId, Integer currentWorkload, String usedProductCode, Integer usedProductAmount, LocalDateTime workPerformanceDate) {
         this.workOrderId = workOrderId;
         this.currentWorkload = currentWorkload;
         this.usedProductCode = usedProductCode;

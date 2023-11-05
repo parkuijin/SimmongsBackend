@@ -1,5 +1,6 @@
 package com.simmongs.workperformance;
 
+import com.simmongs.bom.BOMs;
 import com.simmongs.product.ProductRepository;
 import com.simmongs.product.Products;
 import com.simmongs.workorder.WorkOrderRepository;
@@ -26,14 +27,14 @@ public class WorkPerformanceService {
     private final ProductRepository productRepository;
 
     @Transactional
-    public List<WorkPerformance> findWorkOrderById(Long id) {
+    public List<WorkPerformance> findWorkOrderById(String id) {
         List<WorkPerformance> workPerformanceList = workPerformanceRepository.findByWorkOrderId(id);
 
         return workPerformanceList;
     }
 
     @Transactional
-    public int uploadWorkPerformance(Long workOrderId, Integer currentWorkload, JSONArray usedProduct) {
+    public int uploadWorkPerformance(String workOrderId, Integer currentWorkload, JSONArray usedProduct) {
 
         for(int i=0; i<usedProduct.length(); i++) {
 
@@ -65,9 +66,6 @@ public class WorkPerformanceService {
         if (workOrders.getWorkTargetQuantity() <= workOrders.getWorkCurrentQuantity())
             return -6; // 목표 수량이 이미 달성된 경우
 
-        if (workOrders.getWorkCurrentQuantity() + currentWorkload >= workOrders.getWorkTargetQuantity())
-            return -7; // 목표 수량 초과 제작
-
         for(int i=0; i<usedProduct.length(); i++) {
 
             JSONObject obj = usedProduct.getJSONObject(i);
@@ -91,6 +89,17 @@ public class WorkPerformanceService {
 
         // 작업 지시의 현재 작업량 갱신
         workOrders.workCurrentQuantityUpdate(currentWorkload);
+
+        return 0;
+    }
+
+    @Transactional
+    public int deleteWorkPerformance(Long workPerformanceId) {
+
+        List<WorkPerformance> workPerformanceList = workPerformanceRepository.findByWorkPerformanceId(workPerformanceId);
+
+        for( WorkPerformance workPerformance : workPerformanceList )
+            workPerformanceRepository.delete(workPerformance);
 
         return 0;
     }
