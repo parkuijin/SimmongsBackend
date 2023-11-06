@@ -4,9 +4,12 @@ import com.simmongs.bom.BOMRepository;
 import com.simmongs.bom.BOMs;
 import com.simmongs.department.DepartmentRepository;
 import com.simmongs.mrp.MRPRepository;
+import com.simmongs.mrp.MRPs;
 import com.simmongs.product.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +31,7 @@ public class WorkOrderService {
     private final MRPRepository mrpRepository;
 
     @Transactional
-    public int workOrderRegistration (String departmentName, LocalDateTime workStartDate, String productCode, int workTargetQuantity, LocalDateTime workDeadline, String workStatus) throws JSONException {
+    public int workOrderRegistration (String departmentName, LocalDateTime workStartDate, String productCode, int workTargetQuantity, LocalDateTime workDeadline, String workStatus, JSONArray neededProductArray) throws JSONException {
 
         if (!departmentRepository.findByDepartmentName(departmentName).isPresent())
             return -1; // departmentName 없을 경우
@@ -49,6 +52,7 @@ public class WorkOrderService {
             }
 
         // 작업지시 코드 생성
+        String workOrderId = "";
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd");
         Date date = Date.from(workStartDate.atZone(ZoneId.systemDefault()).toInstant());
         String frontPartWorkOrderId = simpleDateFormat.format(date) + productCode;
@@ -57,25 +61,30 @@ public class WorkOrderService {
             if (workOrderRepository.findByWorkOrderId(newWorkOrderId).isPresent())
                 continue;
             else if (!workOrderRepository.findByWorkOrderId(newWorkOrderId).isPresent()) {
-                if (newWorkOrderId == null) {
+                if (newWorkOrderId == null)
                     return -6; // 작업지시 코드 생성 실패했을 경우
+                else {
+                    // 작업지시 등록
+                    WorkOrders workOrders = new WorkOrders(newWorkOrderId, departmentName, workStartDate, productCode, workTargetQuantity, workDeadline, workStatus);
+                    workOrderId = workOrderRepository.save(workOrders).getWorkOrderId();
+                    break;
                 }
-                // 작업지시 등록
-                WorkOrders workOrders = new WorkOrders(newWorkOrderId, departmentName, workStartDate, productCode, workTargetQuantity, workDeadline, workStatus);
-                workOrderRepository.save(workOrders);
-                break;
             }
         }
 
-        /*// MRP 등록
-        if (!boMsList.isEmpty()) {
-            for (BOMs boMs : boMsList) {
-                String usedProductCode = boMs.getChildProductCode();
-                int totalNeededProductAmount = boMs.getBomAmount() * workTargetQuantity;
-                MRPs mrps = new MRPs(workOrderId, usedProductCode, totalNeededProductAmount, totalNeededProductAmount );
-                mrpRepository.save(mrps);
-            }
-        }*/
+        // MRP 등록
+        for(int i=0; i<neededProductArray.length(); i++) {
+            JSONObject obj = neededProductArray.getJSONObject(i);
+
+            String neededProductCode = obj.getString("neededProductCode");
+            int neededProductAmount = Integer.parseInt(obj.getString("neededProductAmount"));
+
+            if (workOrderId.equals(""))
+                return -7; // 작업지시 ID가 없어 MRP 등록에 실패할 경우
+
+            MRPs mrps = new MRPs(workOrderId, neededProductCode, neededProductAmount, neededProductAmount );
+            mrpRepository.save(mrps);
+        }
 
         return 0;
     }

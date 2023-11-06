@@ -52,8 +52,12 @@ public class WorkOrders {
         this.workStatus = workStatus;
     }
 
-    public void workCurrentQuantityUpdate(int currentWorkLoad) {
+    public void workCurrentQuantityAdd(int currentWorkLoad) {
         this.workCurrentQuantity += currentWorkLoad;
+    }
+
+    public void workCurrentQuantitySub(int currentWorkLoad) {
+        this.workCurrentQuantity -= currentWorkLoad;
     }
 
 }

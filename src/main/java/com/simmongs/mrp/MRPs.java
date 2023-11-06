@@ -16,7 +16,7 @@ public class MRPs {
     private Long mrpId;
 
     @Column(name = "WORK_ORDER_ID")
-    private Long workOrderId;
+    private String workOrderId;
 
     @Column(name = "NEEDED_PRODUCT_CODE")
     private String neededProductCode;
@@ -27,7 +27,7 @@ public class MRPs {
     @Column(name = "CURRENT_NEEDED_PRODUCT_AMOUNT")
     private int currentNeededProductAmount;
 
-    public MRPs(Long workOrderId, String neededProductCode, int totalNeededProductAmount, int currentNeededProductAmount) {
+    public MRPs(String workOrderId, String neededProductCode, int totalNeededProductAmount, int currentNeededProductAmount) {
         this.workOrderId = workOrderId;
         this.neededProductCode = neededProductCode;
         this.totalNeededProductAmount = totalNeededProductAmount;

@@ -4,17 +4,14 @@ import com.simmongs.bom.BOMRepository;
 import com.simmongs.bom.BOMs;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @RestController
@@ -24,6 +21,28 @@ public class WorkOrderController {
 
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderService workOrderService;
+    private final BOMRepository bomRepository;
+
+    // 제품 목표수량 입력하면 필요한 부품 총개수 계산
+    @PostMapping("mrpCalculation")
+    public List<HashMap<String, Object>> MRPCalculation(@RequestBody String json) throws JSONException {
+
+        JSONObject obj = new JSONObject(json);
+        String productCode = obj.getString("productCode");
+        Integer workTargetQuantity = Integer.parseInt(obj.getString("workTargetQuantity"));
+
+        List<HashMap<String, Object>> response = new ArrayList<HashMap<String, Object>>();
+
+        List<BOMs> boMsList = bomRepository.findByProductCode(productCode);
+        for (BOMs boms : boMsList) {
+            HashMap<String, Object> hashMap = new HashMap<>();
+            hashMap.put("neededProductCode", boms.getChildProductCode());
+            hashMap.put("neededProductAmount", boms.getBomAmount()*workTargetQuantity);
+            response.add(hashMap);
+        }
+
+        return response;
+    }
 
     @PostMapping("registration") // 작업지시 등록
     public Map<String, Object> WorkOrderRegistration(@RequestBody String json) throws JSONException {
@@ -38,8 +57,9 @@ public class WorkOrderController {
         int workTargetQuantity = Integer.parseInt(obj.getString("workTargetQuantity"));
         LocalDateTime workDeadline = LocalDateTime.parse(obj.getString("workDeadline"), formatter);
         String workStatus = obj.getString("workStatus");
+        JSONArray neededProductArray = obj.getJSONArray("neededProduct");
 
-        switch (workOrderService.workOrderRegistration(departmentName, workStartDate, productCode, workTargetQuantity, workDeadline, workStatus)){
+        switch (workOrderService.workOrderRegistration(departmentName, workStartDate, productCode, workTargetQuantity, workDeadline, workStatus, neededProductArray)){
             case -1:
                 response.put("success", false);
                 response.put("message", "부서 이름이 유효하지 않습니다.");
@@ -63,6 +83,10 @@ public class WorkOrderController {
             case -6:
                 response.put("success", false);
                 response.put("message", "작업지시 코드 생성이 실패했습니다.");
+                return response;
+            case -7:
+                response.put("success", false);
+                response.put("message", "작업지시 생성이 실패했습니다.");
                 return response;
             case 0:
                 response.put("success", true);
