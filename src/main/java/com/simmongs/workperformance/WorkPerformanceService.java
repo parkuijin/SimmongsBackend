@@ -1,19 +1,16 @@
 package com.simmongs.workperformance;
 
-import com.simmongs.bom.BOMs;
 import com.simmongs.product.ProductRepository;
 import com.simmongs.product.Products;
 import com.simmongs.workorder.WorkOrderRepository;
 import com.simmongs.workorder.WorkOrders;
 import lombok.RequiredArgsConstructor;
-import org.apache.tomcat.util.json.JSONParser;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,13 +22,6 @@ public class WorkPerformanceService {
     private final WorkPerformanceRepository workPerformanceRepository;
     private final WorkOrderRepository workOrderRepository;
     private final ProductRepository productRepository;
-
-    @Transactional
-    public List<WorkPerformance> findWorkOrderById(String id) {
-        List<WorkPerformance> workPerformanceList = workPerformanceRepository.findByWorkOrderId(id);
-
-        return workPerformanceList;
-    }
 
     @Transactional
     public int uploadWorkPerformance(String workOrderId, Integer currentWorkload, JSONArray usedProduct) {
@@ -88,7 +78,7 @@ public class WorkPerformanceService {
         products.amountAdd(currentWorkload);
 
         // 작업 지시의 현재 작업량 갱신
-        workOrders.workCurrentQuantityUpdate(currentWorkload);
+        workOrders.workCurrentQuantityAdd(currentWorkload);
 
         return 0;
     }
@@ -96,10 +86,21 @@ public class WorkPerformanceService {
     @Transactional
     public int deleteWorkPerformance(Long workPerformanceId) {
 
-        List<WorkPerformance> workPerformanceList = workPerformanceRepository.findByWorkPerformanceId(workPerformanceId);
+        WorkPerformance workPerformance = workPerformanceRepository.findByWorkPerformanceId(workPerformanceId);
 
-        for( WorkPerformance workPerformance : workPerformanceList )
-            workPerformanceRepository.delete(workPerformance);
+        // 부품 재고 증가
+        Products products = productRepository.getByProductCode(workPerformance.getUsedProductCode());
+        products.amountAdd(workPerformance.getUsedProductAmount());
+
+        // 제품 재고 차감
+        Products products2 = productRepository.getByProductCode(workOrderRepository.getByWorkOrderId(workPerformance.getWorkOrderId()).getProductCode());
+        products2.amountSub(workPerformance.getCurrentWorkload());
+
+        // 작업지시 진행량 차감
+        WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workPerformance.getWorkOrderId());workOrders.workCurrentQuantitySub(workPerformance.getCurrentWorkload());
+
+        // 작업실적 삭제
+        workPerformanceRepository.delete(workPerformance);
 
         return 0;
     }

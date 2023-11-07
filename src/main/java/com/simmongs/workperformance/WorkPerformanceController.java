@@ -112,7 +112,7 @@ public class WorkPerformanceController {
 
         String workOrderId = obj.getString("workOrderId");
 
-        List<WorkPerformance> workPerformanceList = workPerformanceService.findWorkOrderById(workOrderId);
+        List<WorkPerformance> workPerformanceList = workPerformanceRepository.findByWorkOrderId(workOrderId);
 
         return workPerformanceList;
     }
