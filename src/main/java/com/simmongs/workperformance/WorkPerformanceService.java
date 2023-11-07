@@ -1,5 +1,7 @@
 package com.simmongs.workperformance;
 
+import com.simmongs.mrp.MRPRepository;
+import com.simmongs.mrp.MRPs;
 import com.simmongs.product.ProductRepository;
 import com.simmongs.product.Products;
 import com.simmongs.workorder.WorkOrderRepository;
@@ -11,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 @Transactional(readOnly = true)
@@ -22,6 +23,7 @@ public class WorkPerformanceService {
     private final WorkPerformanceRepository workPerformanceRepository;
     private final WorkOrderRepository workOrderRepository;
     private final ProductRepository productRepository;
+    private final MRPRepository mrpRepository;
 
     @Transactional
     public int uploadWorkPerformance(String workOrderId, Integer currentWorkload, JSONArray usedProduct) {
@@ -71,6 +73,11 @@ public class WorkPerformanceService {
             // 부품 재고 개수 차감
             Products products = productRepository.getByProductCode(usedProductCode);
             products.amountSub(usedProductAmount);
+
+            // MRP 테이블 사용한 부품 개수 증가
+            MRPs mrps = mrpRepository.getByNeededProductCode(usedProductCode);
+            mrps.currentUsedProductAmountAdd(usedProductAmount);
+
         }
 
         // 제품 재고 개수 증가
@@ -89,12 +96,16 @@ public class WorkPerformanceService {
         WorkPerformance workPerformance = workPerformanceRepository.findByWorkPerformanceId(workPerformanceId);
 
         // 부품 재고 증가
-        Products products = productRepository.getByProductCode(workPerformance.getUsedProductCode());
-        products.amountAdd(workPerformance.getUsedProductAmount());
+        Products components = productRepository.getByProductCode(workPerformance.getUsedProductCode());
+        components.amountAdd(workPerformance.getUsedProductAmount());
+
+        // MRP 테이블 사용한 부품 개수 차감
+        MRPs mrps = mrpRepository.getByNeededProductCode(workPerformance.getUsedProductCode());
+        mrps.currentUsedProductAmountSub(workPerformance.getUsedProductAmount());
 
         // 제품 재고 차감
-        Products products2 = productRepository.getByProductCode(workOrderRepository.getByWorkOrderId(workPerformance.getWorkOrderId()).getProductCode());
-        products2.amountSub(workPerformance.getCurrentWorkload());
+        Products products = productRepository.getByProductCode(workOrderRepository.getByWorkOrderId(workPerformance.getWorkOrderId()).getProductCode());
+        products.amountSub(workPerformance.getCurrentWorkload());
 
         // 작업지시 진행량 차감
         WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workPerformance.getWorkOrderId());workOrders.workCurrentQuantitySub(workPerformance.getCurrentWorkload());
