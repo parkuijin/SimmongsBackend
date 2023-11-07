@@ -82,7 +82,7 @@ public class WorkOrderService {
             if (workOrderId.equals(""))
                 return -7; // 작업지시 ID가 없어 MRP 등록에 실패할 경우
 
-            MRPs mrps = new MRPs(workOrderId, neededProductCode, neededProductAmount, neededProductAmount );
+            MRPs mrps = new MRPs(workOrderId, neededProductCode, neededProductAmount, 0 );
             mrpRepository.save(mrps);
         }
 

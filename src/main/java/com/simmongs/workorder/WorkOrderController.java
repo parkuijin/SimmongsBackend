@@ -2,6 +2,8 @@ package com.simmongs.workorder;
 
 import com.simmongs.bom.BOMRepository;
 import com.simmongs.bom.BOMs;
+import com.simmongs.product.ProductRepository;
+import com.simmongs.product.Products;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
@@ -22,9 +24,9 @@ public class WorkOrderController {
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderService workOrderService;
     private final BOMRepository bomRepository;
+    private final ProductRepository productRepository;
 
-    // 제품 목표수량 입력하면 필요한 부품 총개수 계산
-    @PostMapping("mrpCalculation")
+    @PostMapping("mrpCalculation") // 제품 목표수량 입력하면 필요한 부품 총개수 계산
     public List<HashMap<String, Object>> MRPCalculation(@RequestBody String json) throws JSONException {
 
         JSONObject obj = new JSONObject(json);
@@ -32,11 +34,14 @@ public class WorkOrderController {
         Integer workTargetQuantity = Integer.parseInt(obj.getString("workTargetQuantity"));
 
         List<HashMap<String, Object>> response = new ArrayList<HashMap<String, Object>>();
-
         List<BOMs> boMsList = bomRepository.findByProductCode(productCode);
+
         for (BOMs boms : boMsList) {
             HashMap<String, Object> hashMap = new HashMap<>();
+            Products products = productRepository.getByProductCode(boms.getChildProductCode());
             hashMap.put("neededProductCode", boms.getChildProductCode());
+            hashMap.put("neededProductName", products.getProductName());
+            hashMap.put("neededProductUnit", products.getProductUnit());
             hashMap.put("neededProductAmount", boms.getBomAmount()*workTargetQuantity);
             response.add(hashMap);
         }
