@@ -43,6 +43,7 @@ public class WorkOrderController {
             hashMap.put("neededProductName", products.getProductName());
             hashMap.put("neededProductUnit", products.getProductUnit());
             hashMap.put("neededProductAmount", boms.getBomAmount()*workTargetQuantity);
+            hashMap.put("CurrentProductAmount", products.getProductAmount());
             response.add(hashMap);
         }
 
