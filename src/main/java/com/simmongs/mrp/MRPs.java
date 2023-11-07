@@ -24,13 +24,22 @@ public class MRPs {
     @Column(name = "TOTAL_NEEDED_PRODUCT_AMOUNT")
     private int totalNeededProductAmount;
 
-    @Column(name = "CURRENT_NEEDED_PRODUCT_AMOUNT")
-    private int currentNeededProductAmount;
+    @Column(name = "CURRENT_USED_PRODUCT_AMOUNT")
+    private int currentUsedProductAmount;
 
-    public MRPs(String workOrderId, String neededProductCode, int totalNeededProductAmount, int currentNeededProductAmount) {
+    public MRPs(String workOrderId, String neededProductCode, int totalNeededProductAmount, int currentUsedProductAmount) {
         this.workOrderId = workOrderId;
         this.neededProductCode = neededProductCode;
         this.totalNeededProductAmount = totalNeededProductAmount;
-        this.currentNeededProductAmount = currentNeededProductAmount;
+        this.currentUsedProductAmount = currentUsedProductAmount;
     }
+
+    public void currentUsedProductAmountAdd(int currentUsedProductAmount) {
+        this.currentUsedProductAmount += currentUsedProductAmount;
+    }
+
+    public void currentUsedProductAmountSub(int currentUsedProductAmount) {
+        this.currentUsedProductAmount -= currentUsedProductAmount;
+    }
+
 }
