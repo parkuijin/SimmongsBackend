@@ -1,5 +1,7 @@
 package com.simmongs.workperformance;
 
+import com.simmongs.bom.BOMRepository;
+import com.simmongs.bom.BOMs;
 import com.simmongs.mrp.MRPRepository;
 import com.simmongs.mrp.MRPs;
 import com.simmongs.product.ProductRepository;
@@ -13,6 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 
 @Transactional(readOnly = true)
@@ -24,6 +29,7 @@ public class WorkPerformanceService {
     private final WorkOrderRepository workOrderRepository;
     private final ProductRepository productRepository;
     private final MRPRepository mrpRepository;
+    private final BOMRepository bomRepository;
 
     @Transactional
     public int uploadWorkPerformance(String workOrderId, Integer currentWorkload, JSONArray usedProduct) {
@@ -65,9 +71,18 @@ public class WorkPerformanceService {
             String usedProductCode = obj.getString("usedProductCode");
             Integer usedProductAmount = Integer.parseInt(obj.getString("usedProductAmount"));
 
+            // 작업번호 생성
+            String workNumber = "";
+            for (int j=0; j<10000; j++) {
+                workNumber = "WP" + String.format("%05d", i);
+                if (workPerformanceRepository.findByWorkNumber(workNumber).isPresent())
+                    continue; // 작업번호가 존재시 다음 번호 생성
+                else break;
+            }
+
             // 작업 실적 등록
             LocalDateTime workPerformanceDate = LocalDateTime.now();
-            WorkPerformance workPerformance = new WorkPerformance(workOrderId, currentWorkload, usedProductCode, usedProductAmount, workPerformanceDate);
+            WorkPerformance workPerformance = new WorkPerformance(workNumber, workOrderId, currentWorkload, usedProductCode, usedProductAmount, workPerformanceDate);
             workPerformanceRepository.save(workPerformance);
 
             // 부품 재고 개수 차감
@@ -75,7 +90,7 @@ public class WorkPerformanceService {
             products.amountSub(usedProductAmount);
 
             // MRP 테이블 사용한 부품 개수 증가
-            MRPs mrps = mrpRepository.getByNeededProductCode(usedProductCode);
+            MRPs mrps = mrpRepository.getByNeededProductCode(workOrderId, usedProductCode);
             mrps.currentUsedProductAmountAdd(usedProductAmount);
 
         }
@@ -100,7 +115,7 @@ public class WorkPerformanceService {
         components.amountAdd(workPerformance.getUsedProductAmount());
 
         // MRP 테이블 사용한 부품 개수 차감
-        MRPs mrps = mrpRepository.getByNeededProductCode(workPerformance.getUsedProductCode());
+        MRPs mrps = mrpRepository.getByNeededProductCode(workPerformance.getWorkOrderId(), workPerformance.getUsedProductCode());
         mrps.currentUsedProductAmountSub(workPerformance.getUsedProductAmount());
 
         // 제품 재고 차감
@@ -114,6 +129,33 @@ public class WorkPerformanceService {
         workPerformanceRepository.delete(workPerformance);
 
         return 0;
+    }
+
+    @Transactional
+    public List<HashMap<String, Object>> MRPCalculation(JSONArray mrpCalcArr) {
+
+        List<HashMap<String, Object>> response = new ArrayList<HashMap<String, Object>>();
+
+        for (int i=0; i<mrpCalcArr.length(); i++) {
+            JSONObject obj = mrpCalcArr.getJSONObject(i);
+            String workOrderId = obj.getString("workOrderId");
+            int currentWorkload = obj.getInt("currentWorkload");
+
+            List<BOMs> boMsList = bomRepository.findByProductCode(workOrderRepository.getByWorkOrderId(workOrderId).getProductCode());
+            for (BOMs boms : boMsList) {
+                HashMap<String, Object> hashMap = new HashMap<>();
+                hashMap.put("workOrderId", workOrderId);
+                hashMap.put("usedProductCode", boms.getChildProductCode());
+                hashMap.put("usedProductName", productRepository.getByProductCode(boms.getChildProductCode()).getProductName());
+                hashMap.put("usedProductUnit", productRepository.getByProductCode(boms.getChildProductCode()).getProductUnit());
+                hashMap.put("currentUsedProductAmount", mrpRepository.getByNeededProductCode(workOrderId, boms.getChildProductCode()).getCurrentUsedProductAmount());
+                hashMap.put("totalNeededProductAmount", mrpRepository.getByNeededProductCode(workOrderId, boms.getChildProductCode()).getTotalNeededProductAmount());
+                hashMap.put("usedProductAmount", boms.getBomAmount()*currentWorkload);
+                response.add(hashMap);
+            }
+        }
+
+        return response;
     }
 
 }

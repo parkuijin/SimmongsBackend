@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface WorkPerformanceRepository extends JpaRepository<WorkPerformance, Long> {
@@ -21,4 +22,5 @@ public interface WorkPerformanceRepository extends JpaRepository<WorkPerformance
     List<WorkPerformance> findByWorkOrderId(@Param(value = "WORK_ORDER_ID")String workOrderId);
 
     WorkPerformance findByWorkPerformanceId(@Param(value = "WORK_PERFORMANCE_ID")Long workPerformanceId);
+    Optional<WorkPerformance> findByWorkNumber(String workNumber);
 }

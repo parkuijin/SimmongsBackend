@@ -23,27 +23,14 @@ public class WorkPerformanceController {
 
     private final WorkPerformanceRepository workPerformanceRepository;
     private final WorkPerformanceService workPerformanceService;
-    private final WorkOrderRepository workOrderRepository;
-    private final BOMRepository bomRepository;
 
     @PostMapping("mrpCalculation") // 제품 완성 개수 입력하면 소모된 부품 개수 계산
     public List<HashMap<String, Object>> MRPCalculation(@RequestBody String json) throws JSONException {
 
         JSONObject obj = new JSONObject(json);
-        String workOrderId = obj.getString("workOrderId");
-        Integer currentWorkload = Integer.parseInt(obj.getString("currentWorkload"));
+        JSONArray mrpCalcArr = obj.getJSONArray("workOrderList");
 
-        List<HashMap<String, Object>> response = new ArrayList<HashMap<String, Object>>();
-
-        List<BOMs> boMsList = bomRepository.findByProductCode(workOrderRepository.getByWorkOrderId(workOrderId).getProductCode());
-        for (BOMs boms : boMsList) {
-            HashMap<String, Object> hashMap = new HashMap<>();
-            hashMap.put("usedProductCode", boms.getChildProductCode());
-            hashMap.put("usedProductAmount", boms.getBomAmount()*currentWorkload);
-            response.add(hashMap);
-        }
-
-        return response;
+        return workPerformanceService.MRPCalculation(mrpCalcArr);
     }
 
     @PostMapping("registration") // 작업실적 등록
