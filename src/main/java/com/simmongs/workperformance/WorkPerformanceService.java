@@ -32,78 +32,98 @@ public class WorkPerformanceService {
     private final BOMRepository bomRepository;
 
     @Transactional
-    public int uploadWorkPerformance(String workOrderId, Integer currentWorkload, JSONArray usedProduct) {
+    public int uploadWorkPerformance(JSONObject obj) {
 
-        for(int i=0; i<usedProduct.length(); i++) {
+        JSONArray workPerformanceList = obj.getJSONArray("workPerformanceList");
 
-            JSONObject obj = usedProduct.getJSONObject(i);
-
-            String usedProductCode = obj.getString("usedProductCode");
-            Integer usedProductAmount = Integer.parseInt(obj.getString("usedProductAmount"));
-
-            if (workOrderId == null || currentWorkload == null || usedProductCode.trim().equals("") || usedProductAmount == null)
-                return -1; // null 체크
-
-            Optional<Products> productsCheck = productRepository.findByProductCode(usedProductCode);
-            if (!productsCheck.isPresent())
-                return -3; // UsedProductCode 없을 경우
-
-            Products products = productRepository.getByProductCode(usedProductCode);
-            if (products.getProductAmount() <= 0)
-                return -5; // 재고가 부족할 경우
+        // 작업번호 생성
+        String workNumber = "";
+        for (int j = 1; j < 10000; j++) {
+            workNumber = "WP" + String.format("%05d", j);
+            if (!workPerformanceRepository.findByWorkNumber(workNumber).isEmpty())
+                continue; // 작업번호가 존재시 다음 번호 생성
+            else break;
         }
 
-        Optional<WorkOrders> workOrdersCheck = workOrderRepository.findByWorkOrderId(workOrderId);
-        if (!workOrdersCheck.isPresent())
-            return -2; // WorkOrder 없을 경우
+        // 오류 처리
+        for (int k = 0; k < workPerformanceList.length(); k++) {
+            JSONObject workPerformanceJsonObject = workPerformanceList.getJSONObject(k);
+            String workOrderId = workPerformanceJsonObject.getString("workOrderId");
+            Integer currentWorkload = workPerformanceJsonObject.getInt("currentWorkload");
+            JSONArray usedProductList = workPerformanceJsonObject.getJSONArray("usedProduct");
 
-        if (currentWorkload <= 0)
-            return -4; // 작업량 0 이하일 경우
+            for (int i = 0; i < usedProductList.length(); i++) {
+                JSONObject usedProduct = usedProductList.getJSONObject(i);
 
-        WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workOrderId);
-        if (workOrders.getWorkTargetQuantity() <= workOrders.getWorkCurrentQuantity())
-            return -6; // 목표 수량이 이미 달성된 경우
+                String usedProductCode = usedProduct.getString("usedProductCode");
+                Integer usedProductAmount = Integer.parseInt(usedProduct.getString("usedProductAmount"));
 
-        for(int i=0; i<usedProduct.length(); i++) {
+                if (workOrderId == null || currentWorkload == null || usedProductCode.trim().equals("") || usedProductAmount == null)
+                    return -1; // null 체크
 
-            JSONObject obj = usedProduct.getJSONObject(i);
+                Optional<Products> productsCheck = productRepository.findByProductCode(usedProductCode);
+                if (!productsCheck.isPresent())
+                    return -3; // UsedProductCode 없을 경우
 
-            String usedProductCode = obj.getString("usedProductCode");
-            Integer usedProductAmount = Integer.parseInt(obj.getString("usedProductAmount"));
-
-            // 작업번호 생성
-            String workNumber = "";
-            for (int j=0; j<10000; j++) {
-                workNumber = "WP" + String.format("%05d", i);
-                if (workPerformanceRepository.findByWorkNumber(workNumber).isPresent())
-                    continue; // 작업번호가 존재시 다음 번호 생성
-                else break;
+                Products products = productRepository.getByProductCode(usedProductCode);
+                if (products.getProductAmount() <= 0)
+                    return -5; // 재고가 부족할 경우
             }
 
-            // 작업 실적 등록
-            LocalDateTime workPerformanceDate = LocalDateTime.now();
-            WorkPerformance workPerformance = new WorkPerformance(workNumber, workOrderId, currentWorkload, usedProductCode, usedProductAmount, workPerformanceDate);
-            workPerformanceRepository.save(workPerformance);
+            Optional<WorkOrders> workOrdersCheck = workOrderRepository.findByWorkOrderId(workOrderId);
+            if (!workOrdersCheck.isPresent())
+                return -2; // WorkOrder 없을 경우
 
-            // 부품 재고 개수 차감
-            Products products = productRepository.getByProductCode(usedProductCode);
-            products.amountSub(usedProductAmount);
+            if (currentWorkload <= 0)
+                return -4; // 작업량 0 이하일 경우
 
-            // MRP 테이블 사용한 부품 개수 증가
-            MRPs mrps = mrpRepository.getByNeededProductCode(workOrderId, usedProductCode);
-            mrps.currentUsedProductAmountAdd(usedProductAmount);
-
+            WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workOrderId);
+            if (workOrders.getWorkTargetQuantity() <= workOrders.getWorkCurrentQuantity())
+                return -6; // 목표 수량이 이미 달성된 경우
         }
 
-        // 제품 재고 개수 증가
-        Products products = productRepository.getByProductCode(workOrders.getProductCode());
-        products.amountAdd(currentWorkload);
+        for (int k = 0; k < workPerformanceList.length(); k++) {
+            JSONObject workPerformanceJsonObject = workPerformanceList.getJSONObject(k);
+            String workOrderId = workPerformanceJsonObject.getString("workOrderId");
+            Integer currentWorkload = workPerformanceJsonObject.getInt("currentWorkload");
+            JSONArray usedProductList = workPerformanceJsonObject.getJSONArray("usedProduct");
 
-        // 작업 지시의 현재 작업량 갱신
-        workOrders.workCurrentQuantityAdd(currentWorkload);
+            for (int i = 0; i < usedProductList.length(); i++) {
+                JSONObject usedProduct = usedProductList.getJSONObject(i);
+
+                String usedProductCode = usedProduct.getString("usedProductCode");
+                Integer usedProductAmount = Integer.parseInt(usedProduct.getString("usedProductAmount"));
+
+                // 작업 실적 등록
+                LocalDateTime workPerformanceDate = LocalDateTime.now();
+                WorkPerformance workPerformance = new WorkPerformance(workNumber, workOrderId, currentWorkload, usedProductCode, usedProductAmount, workPerformanceDate);
+                workPerformanceRepository.save(workPerformance);
+
+                // 부품 재고 개수 차감
+                Products products = productRepository.getByProductCode(usedProductCode);
+                products.amountSub(usedProductAmount);
+
+                // MRP 테이블 사용한 부품 개수 증가
+                MRPs mrps = mrpRepository.getByNeededProductCode(workOrderId, usedProductCode);
+                mrps.currentUsedProductAmountAdd(usedProductAmount);
+
+            }
+
+            WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workOrderId);
+
+            // 제품 재고 개수 증가
+            Products products = productRepository.getByProductCode(workOrders.getProductCode());
+            products.amountAdd(currentWorkload);
+
+            // 작업 지시의 현재 작업량 갱신
+            workOrders.workCurrentQuantityAdd(currentWorkload);
+
+        }
 
         return 0;
     }
+
+
 
     @Transactional
     public int deleteWorkPerformance(Long workPerformanceId) {

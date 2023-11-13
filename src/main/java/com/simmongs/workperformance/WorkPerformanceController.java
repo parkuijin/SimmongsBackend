@@ -36,13 +36,9 @@ public class WorkPerformanceController {
     @PostMapping("registration") // 작업실적 등록
     public Map<String, Object> WorkPerformanceRegistration(@RequestBody String json) throws JSONException {
         Map<String, Object> response = new HashMap<>();
-
         JSONObject obj = new JSONObject(json);
-        String workOrderId = obj.getString("workOrderId");
-        Integer currentWorkload = Integer.parseInt(obj.getString("currentWorkload"));
-        JSONArray usedProductArray = obj.getJSONArray("usedProduct");
 
-        switch (workPerformanceService.uploadWorkPerformance(workOrderId, currentWorkload, usedProductArray)) {
+        switch (workPerformanceService.uploadWorkPerformance(obj)) {
             case -1:
                 response.put("success", false);
                 response.put("message", "빈칸을 모두 채워주세요.");
