@@ -59,7 +59,7 @@ public class WorkOrderController {
     }
 
     @GetMapping("showAll") // 작업지시 전체 조회
-    public List<WorkOrders> ShowAllWorkOrders(){
+    public List<HashMap<String, Object>> ShowAllWorkOrders(){
         return workOrderService.ShowAllWorkOrders();
     }
 

@@ -151,25 +151,35 @@ public class WorkOrderService {
     }
 
     @Transactional
-    public List<WorkOrders> ShowAllWorkOrders() {
+    public List<HashMap<String, Object>> ShowAllWorkOrders() {
+        List<HashMap<String, Object>> response = new ArrayList<HashMap<String, Object>>();
         LocalDateTime localDateTime = LocalDateTime.now();
-
         List<WorkOrders> workOrdersList = workOrderRepository.findAll();
-        List<WorkOrders> responseList = new ArrayList<>();
 
         // 작업 상태가 중단, 완료 제외
         for (int i=0; i<workOrdersList.size(); i++) {
+            HashMap<String, Object> hashMap = new HashMap<>();
             WorkOrders workOrders = workOrdersList.get(i);
             switch (workOrders.getWorkStatus()) {
                 case "중단": case "완료": case "초과":
                         break;
                 default:
                     // 마감일이 현재 달일 경우만 출력
-                    if (workOrders.getWorkDeadline().getMonth().toString().equals(localDateTime.getMonth().toString()))
-                        responseList.add(workOrders);
+                    if (workOrders.getWorkDeadline().getMonth().toString().equals(localDateTime.getMonth().toString())) {
+                        hashMap.put("workOrderId", workOrders.getWorkOrderId());
+                        hashMap.put("departmentName", workOrders.getDepartmentName());
+                        hashMap.put("workDeadline", workOrders.getWorkDeadline());
+                        hashMap.put("productCode", workOrders.getProductCode());
+                        hashMap.put("productName", productRepository.getByProductCode(workOrders.getProductCode()).getProductName());
+                        hashMap.put("productUnit", productRepository.getByProductCode(workOrders.getProductCode()).getProductUnit());
+                        hashMap.put("workCurrentQuantity", workOrders.getWorkCurrentQuantity());
+                        hashMap.put("workTargetQuantity", workOrders.getWorkTargetQuantity());
+                        hashMap.put("workStatus", workOrders.getWorkStatus());
+                        response.add(hashMap);
+                    }
             }
         }
-        return responseList;
+        return response;
     }
 
     @Transactional
