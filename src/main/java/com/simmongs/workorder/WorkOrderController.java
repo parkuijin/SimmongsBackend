@@ -45,17 +45,29 @@ public class WorkOrderController {
         String productCode = obj.getString("productCode");
         int workTargetQuantity = Integer.parseInt(obj.getString("workTargetQuantity"));
         LocalDateTime workDeadline = LocalDateTime.parse(obj.getString("workDeadline"), formatter);
-        String workStatus = obj.getString("workStatus");
         JSONArray neededProductArray = obj.getJSONArray("neededProduct");
 
-        return workOrderService.workOrderRegistration(departmentName, workStartDate, productCode, workTargetQuantity, workDeadline, workStatus, neededProductArray);
+        return workOrderService.workOrderRegistration(departmentName, workStartDate, productCode, workTargetQuantity, workDeadline, neededProductArray);
+    }
 
+    @DeleteMapping("delete") // 작업지시 삭제
+    public Map<String, Object> WorkOrderDelete(@RequestBody String json) throws JSONException {
+        JSONObject obj = new JSONObject(json);
+        String workOrderId = obj.getString("workOrderId");
 
+        return workOrderService.workOrderDelete(workOrderId);
     }
 
     @GetMapping("showAll") // 작업지시 전체 조회
     public List<WorkOrders> ShowAllWorkOrders(){
         return workOrderService.ShowAllWorkOrders();
+    }
+
+    @PostMapping("stopWorkOrder") // 작업지시 중단
+    public Map<String, Object> stopWorkOrder(@RequestBody String json) throws JSONException {
+        JSONObject obj = new JSONObject(json);
+
+        return workOrderService.stopWorkOrder(obj);
     }
 
 }

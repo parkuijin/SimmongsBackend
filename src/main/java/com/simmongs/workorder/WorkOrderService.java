@@ -31,7 +31,7 @@ public class WorkOrderService {
     private final MRPRepository mrpRepository;
 
     @Transactional
-    public Map<String, Object> workOrderRegistration (String departmentName, LocalDateTime workStartDate, String productCode, int workTargetQuantity, LocalDateTime workDeadline, String workStatus, JSONArray neededProductArray) throws JSONException {
+    public Map<String, Object> workOrderRegistration (String departmentName, LocalDateTime workStartDate, String productCode, int workTargetQuantity, LocalDateTime workDeadline, JSONArray neededProductArray) throws JSONException {
 
         Map<String, Object> response = new HashMap<>();
 
@@ -85,7 +85,7 @@ public class WorkOrderService {
                 }
                 else {
                     // 작업지시 등록
-                    WorkOrders workOrders = new WorkOrders(newWorkOrderId, departmentName, workStartDate, productCode, workTargetQuantity, workDeadline, workStatus);
+                    WorkOrders workOrders = new WorkOrders(newWorkOrderId, departmentName, workStartDate, productCode, workTargetQuantity, workDeadline, "준비");
                     workOrderId = workOrderRepository.save(workOrders).getWorkOrderId();
                     response.put("success", true);
                     response.put("id", workOrderId);
@@ -114,6 +114,24 @@ public class WorkOrderService {
     }
 
     @Transactional
+    public Map<String, Object> workOrderDelete (String workOrderId) throws JSONException {
+        Map<String, Object> response = new HashMap<>();
+
+        WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workOrderId);
+
+        // 작업지시는 준비 상태에서만 삭제 가능
+        if (workOrders.getWorkStatus().equals("준비")) {
+            workOrderRepository.delete(workOrders);
+            response.put("success", true);
+            return response;
+        }
+
+        response.put("success", false);
+        response.put("message", "작업지시는 준비 상태에서만 삭제할 수 있습니다.");
+        return response;
+    }
+
+    @Transactional
     public List<HashMap<String, Object>> mrpCalculation (String productCode, Integer workTargetQuantity) {
         List<HashMap<String, Object>> response = new ArrayList<HashMap<String, Object>>();
         List<BOMs> boMsList = bomRepository.findByProductCode(productCode);
@@ -134,6 +152,7 @@ public class WorkOrderService {
 
     @Transactional
     public List<WorkOrders> ShowAllWorkOrders() {
+        LocalDateTime localDateTime = LocalDateTime.now();
 
         List<WorkOrders> workOrdersList = workOrderRepository.findAll();
         List<WorkOrders> responseList = new ArrayList<>();
@@ -142,13 +161,27 @@ public class WorkOrderService {
         for (int i=0; i<workOrdersList.size(); i++) {
             WorkOrders workOrders = workOrdersList.get(i);
             switch (workOrders.getWorkStatus()) {
-                case "중단": case "완료":
-                    break;
+                case "중단": case "완료": case "초과":
+                        break;
                 default:
-                    responseList.add(workOrders);
+                    // 마감일이 현재 달일 경우만 출력
+                    if (workOrders.getWorkDeadline().getMonth().toString().equals(localDateTime.getMonth().toString()))
+                        responseList.add(workOrders);
             }
         }
         return responseList;
+    }
+
+    @Transactional
+    public Map<String, Object> stopWorkOrder(JSONObject obj) throws JSONException {
+        Map<String, Object> response = new HashMap<>();
+
+        String workOrderId = obj.getString("workOrderId");
+        WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workOrderId);
+        workOrders.stopWorkOrder();
+
+        response.put("success", true);
+        return response;
     }
 
 }

@@ -60,4 +60,12 @@ public class WorkOrders {
         this.workCurrentQuantity -= currentWorkLoad;
     }
 
+    public void underWayWorkOrder() { this.workStatus = "진행"; }
+
+    public void stopWorkOrder() { this.workStatus = "중단"; }
+
+    public void completeWorkOrder() {this.workStatus = "완료"; }
+
+    public void overWorkOrder() {this.workStatus = "초과"; }
+
 }
