@@ -10,15 +10,13 @@ import com.simmongs.workorder.WorkOrderRepository;
 import com.simmongs.workorder.WorkOrders;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -35,15 +33,7 @@ public class WorkPerformanceService {
     public int uploadWorkPerformance(JSONObject obj) {
 
         JSONArray workPerformanceList = obj.getJSONArray("workPerformanceList");
-
-        // 작업번호 생성
         String workNumber = "";
-        for (int j = 1; j < 10000; j++) {
-            workNumber = "WP" + String.format("%05d", j);
-            if (!workPerformanceRepository.findByWorkNumber(workNumber).isEmpty())
-                continue; // 작업번호가 존재시 다음 번호 생성
-            else break;
-        }
 
         // 오류 처리
         for (int k = 0; k < workPerformanceList.length(); k++) {
@@ -80,6 +70,9 @@ public class WorkPerformanceService {
             WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workOrderId);
             if (workOrders.getWorkTargetQuantity() <= workOrders.getWorkCurrentQuantity())
                 return -6; // 목표 수량이 이미 달성된 경우
+            else if (workOrders.getWorkStatus().equals("중단")) {
+                return -7; // 중단된 작업 지시일 경우
+            }
         }
 
         for (int k = 0; k < workPerformanceList.length(); k++) {
@@ -87,6 +80,14 @@ public class WorkPerformanceService {
             String workOrderId = workPerformanceJsonObject.getString("workOrderId");
             Integer currentWorkload = workPerformanceJsonObject.getInt("currentWorkload");
             JSONArray usedProductList = workPerformanceJsonObject.getJSONArray("usedProduct");
+
+            // 작업번호 생성
+            for (int j = 1; j < 10000; j++) {
+                workNumber = "WP" + String.format("%05d", j);
+                if (!workPerformanceRepository.findByWorkNumber(workNumber).isEmpty())
+                    continue; // 작업번호가 존재시 다음 번호 생성
+                else break;
+            }
 
             for (int i = 0; i < usedProductList.length(); i++) {
                 JSONObject usedProduct = usedProductList.getJSONObject(i);
@@ -106,7 +107,6 @@ public class WorkPerformanceService {
                 // MRP 테이블 사용한 부품 개수 증가
                 MRPs mrps = mrpRepository.getByNeededProductCode(workOrderId, usedProductCode);
                 mrps.currentUsedProductAmountAdd(usedProductAmount);
-
             }
 
             WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workOrderId);
@@ -118,45 +118,64 @@ public class WorkPerformanceService {
             // 작업 지시의 현재 작업량 갱신
             workOrders.workCurrentQuantityAdd(currentWorkload);
 
+            // 작업 지시의 상태를 변경
+            if (workOrders.getWorkCurrentQuantity() >= 1 && workOrders.getWorkCurrentQuantity() < workOrders.getWorkTargetQuantity()) {
+                workOrders.underWayWorkOrder(); // 작업상태 진행으로 변경 : 1 <= currentQuantity < targetQuantity
+            } else if (workOrders.getWorkCurrentQuantity() == workOrders.getWorkTargetQuantity()) {
+                workOrders.completeWorkOrder(); // 작업상태 완료로 변경 : currentQuantity = targetQuantity
+            } else if (workOrders.getWorkCurrentQuantity() >= workOrders.getWorkTargetQuantity()) {
+                workOrders.overWorkOrder(); // 작업상태 초과로 변경 : currentQuantity <= targetQuantity
+            }
         }
 
         return 0;
     }
 
-
-
     @Transactional
-    public int deleteWorkPerformance(Long workPerformanceId) {
+    public Map<String, Object> deleteWorkPerformance(JSONObject obj) throws JSONException {
+        Map<String, Object> response = new HashMap<>();
 
-        WorkPerformance workPerformance = workPerformanceRepository.findByWorkPerformanceId(workPerformanceId);
+        String workNumber = obj.getString("workNumber");
+        String workOrderId = obj.getString("workOrderId");
+        int currentWorkload = obj.getInt("currentWorkload");
 
-        // 부품 재고 증가
-        Products components = productRepository.getByProductCode(workPerformance.getUsedProductCode());
-        components.amountAdd(workPerformance.getUsedProductAmount());
+        WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workOrderId);
+        Products products = productRepository.getByProductCode(workOrderRepository.getByWorkOrderId(workOrderId).getProductCode());
+        List<WorkPerformance> workPerformanceList = workPerformanceRepository.findByWorkNumber(workNumber);
 
-        // MRP 테이블 사용한 부품 개수 차감
-        MRPs mrps = mrpRepository.getByNeededProductCode(workPerformance.getWorkOrderId(), workPerformance.getUsedProductCode());
-        mrps.currentUsedProductAmountSub(workPerformance.getUsedProductAmount());
+        for (int i = 0; i < workPerformanceList.size(); i++) {
+            WorkPerformance workPerformance = workPerformanceList.get(i);
+            currentWorkload = workPerformance.getCurrentWorkload();
+
+            // 부품 재고 증가
+            Products components = productRepository.getByProductCode(workPerformance.getUsedProductCode());
+            components.amountAdd(workPerformance.getUsedProductAmount());
+
+            // MRP 테이블 사용한 부품 개수 차감
+            MRPs mrps = mrpRepository.getByNeededProductCode(workPerformance.getWorkOrderId(), workPerformance.getUsedProductCode());
+            mrps.currentUsedProductAmountSub(workPerformance.getUsedProductAmount());
+
+            // 작업실적 삭제
+            workPerformanceRepository.delete(workPerformance);
+
+        }
 
         // 제품 재고 차감
-        Products products = productRepository.getByProductCode(workOrderRepository.getByWorkOrderId(workPerformance.getWorkOrderId()).getProductCode());
-        products.amountSub(workPerformance.getCurrentWorkload());
+        products.amountSub(currentWorkload);
 
         // 작업지시 진행량 차감
-        WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workPerformance.getWorkOrderId());workOrders.workCurrentQuantitySub(workPerformance.getCurrentWorkload());
+        workOrders.workCurrentQuantitySub(currentWorkload);
 
-        // 작업실적 삭제
-        workPerformanceRepository.delete(workPerformance);
-
-        return 0;
+        response.put("success", true);
+        return response;
     }
 
     @Transactional
-    public List<HashMap<String, Object>> MRPCalculation(JSONArray mrpCalcArr) {
+    public List<HashMap<String, Object>> MRPCalculation(JSONArray mrpCalcArr) throws JSONException {
 
         List<HashMap<String, Object>> response = new ArrayList<HashMap<String, Object>>();
 
-        for (int i=0; i<mrpCalcArr.length(); i++) {
+        for (int i = 0; i < mrpCalcArr.length(); i++) {
             JSONObject obj = mrpCalcArr.getJSONObject(i);
             String workOrderId = obj.getString("workOrderId");
             int currentWorkload = obj.getInt("currentWorkload");
@@ -170,7 +189,7 @@ public class WorkPerformanceService {
                 hashMap.put("usedProductUnit", productRepository.getByProductCode(boms.getChildProductCode()).getProductUnit());
                 hashMap.put("currentUsedProductAmount", mrpRepository.getByNeededProductCode(workOrderId, boms.getChildProductCode()).getCurrentUsedProductAmount());
                 hashMap.put("totalNeededProductAmount", mrpRepository.getByNeededProductCode(workOrderId, boms.getChildProductCode()).getTotalNeededProductAmount());
-                hashMap.put("usedProductAmount", boms.getBomAmount()*currentWorkload);
+                hashMap.put("usedProductAmount", boms.getBomAmount() * currentWorkload);
                 response.add(hashMap);
             }
         }
@@ -178,4 +197,28 @@ public class WorkPerformanceService {
         return response;
     }
 
+    @Transactional
+    public List<Map<String, Object>> showWorkPerformance(JSONObject obj) throws JSONException {
+    String workOrderId = obj.getString("workOrderId");
+
+    return workPerformanceRepository.searchWorkPerformanceByWorkOrderId(workOrderId);
+    }
+
+    @Transactional List<Map<String, Object>> showUsedComponent(JSONObject obj) throws JSONException {
+        List<Map<String, Object>> response = new ArrayList<Map<String, Object>>();
+
+        String workNumber = obj.getString("workNumber");
+
+        List<WorkPerformance> workPerformanceList = workPerformanceRepository.findByWorkNumber(workNumber);
+        for (WorkPerformance workPerformance : workPerformanceList) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("componentName", productRepository.getByProductCode(workPerformance.getUsedProductCode()).getProductName());
+            map.put("componentCode",workPerformance.getUsedProductCode());
+            map.put("componentUnit", productRepository.getByProductCode(workPerformance.getUsedProductCode()).getProductUnit());
+            map.put("usedComponentAmount", workPerformance.getUsedProductAmount());
+            response.add(map);
+        }
+
+        return response;
+    }
 }

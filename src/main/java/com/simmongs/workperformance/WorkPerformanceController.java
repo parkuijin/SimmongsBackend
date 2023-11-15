@@ -21,7 +21,6 @@ import java.util.Map;
 @RequestMapping(value = "workperformance")
 public class WorkPerformanceController {
 
-    private final WorkPerformanceRepository workPerformanceRepository;
     private final WorkPerformanceService workPerformanceService;
 
     @PostMapping("mrpCalculation") // 제품 완성 개수 입력하면 소모된 부품 개수 계산
@@ -63,6 +62,10 @@ public class WorkPerformanceController {
                 response.put("success", false);
                 response.put("message", "이미 완료된 작업지시입니다.");
                 return response;
+            case -7:
+                response.put("success", false);
+                response.put("message", "중단된 작업지시입니다.");
+                return response;
             case 0:
                 response.put("success", true);
                 return response;
@@ -73,31 +76,23 @@ public class WorkPerformanceController {
 
     @DeleteMapping("delete") // 실적 삭제
     public Map<String, Object> WorkPerformanceDelete(@RequestBody String json) throws JSONException {
-        Map<String, Object> response = new HashMap<>();
-
         JSONObject obj = new JSONObject(json);
-        Long workPerformanceId = obj.getLong("workPerformanceId");
-        switch (workPerformanceService.deleteWorkPerformance(workPerformanceId)) {
-            case 0:
-                response.put("success", true);
-                return response;
-        }
 
-        return null;
+        return workPerformanceService.deleteWorkPerformance(obj);
+
     }
-
-    @GetMapping("showAll")
-    public List<WorkPerformance> ShowAll() { return workPerformanceRepository.findAll(); }
 
     @PostMapping("showWorkPerformance") // WorkOrderId로 검색하여 작업실적 전체 조회
-    public List<WorkPerformance> ShowWorkPerformance(@RequestBody String json){
+    public List<Map<String, Object>> ShowWorkPerformance(@RequestBody String json) throws JSONException {
         JSONObject obj = new JSONObject(json);
 
-        String workOrderId = obj.getString("workOrderId");
-
-        List<WorkPerformance> workPerformanceList = workPerformanceRepository.findByWorkOrderId(workOrderId);
-
-        return workPerformanceList;
+        return workPerformanceService.showWorkPerformance(obj);
     }
 
+    @PostMapping("showUsedComponent") //
+    public List<Map<String, Object>> showUsedComponent(@RequestBody String json) throws JSONException {
+        JSONObject obj = new JSONObject(json);
+
+        return workPerformanceService.showUsedComponent(obj);
+    }
 }
