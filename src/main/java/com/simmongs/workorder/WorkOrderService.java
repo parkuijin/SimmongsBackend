@@ -1,5 +1,6 @@
 package com.simmongs.workorder;
 
+import com.querydsl.core.Tuple;
 import com.simmongs.bom.BOMRepository;
 import com.simmongs.bom.BOMs;
 import com.simmongs.department.DepartmentRepository;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Transactional(readOnly = true)
@@ -168,7 +170,7 @@ public class WorkOrderService {
                     if (workOrders.getWorkDeadline().getMonth().toString().equals(localDateTime.getMonth().toString())) {
                         hashMap.put("workOrderId", workOrders.getWorkOrderId());
                         hashMap.put("departmentName", workOrders.getDepartmentName());
-                        hashMap.put("workDeadline", workOrders.getWorkDeadline());
+                        hashMap.put("workDeadline", workOrders.getWorkDeadline().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
                         hashMap.put("productCode", workOrders.getProductCode());
                         hashMap.put("productName", productRepository.getByProductCode(workOrders.getProductCode()).getProductName());
                         hashMap.put("productUnit", productRepository.getByProductCode(workOrders.getProductCode()).getProductUnit());
@@ -192,6 +194,28 @@ public class WorkOrderService {
 
         response.put("success", true);
         return response;
+    }
+
+    @Transactional
+    public List<SearchWorkOrderDto> searchWorkOrder(JSONObject obj) throws JSONException {
+        String workOrderId = null;
+        if(obj.has("workOrderId"))
+            workOrderId = obj.getString("workOrderId");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime startDate = null;
+        if(obj.has("startDate"))
+            startDate = LocalDateTime.parse(obj.getString("startDate"), formatter);
+        LocalDateTime deadline = null;
+        if (obj.has("deadline"))
+            deadline = LocalDateTime.parse(obj.getString("deadline"), formatter);
+        String productName = null;
+        if (obj.has("productName"))
+            productName = obj.getString("productName");
+        String workStatus = null;
+        if (obj.has("workStatus"))
+            workStatus = obj.getString("workStatus");
+
+        return workOrderRepository.findBySearchOption(workOrderId, startDate, deadline, productName, workStatus);
     }
 
 }

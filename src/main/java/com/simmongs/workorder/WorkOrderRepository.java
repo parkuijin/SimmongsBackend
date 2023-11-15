@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface WorkOrderRepository extends JpaRepository<WorkOrders, Long> {
+public interface WorkOrderRepository extends JpaRepository<WorkOrders, Long>, WorkOrderRepositoryCustom {
 
     Optional<WorkOrders> findByWorkOrderId(String id);
 

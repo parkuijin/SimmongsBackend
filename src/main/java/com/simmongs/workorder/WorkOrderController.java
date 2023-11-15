@@ -1,5 +1,6 @@
 package com.simmongs.workorder;
 
+import com.querydsl.core.Tuple;
 import com.simmongs.bom.BOMRepository;
 import com.simmongs.bom.BOMs;
 import com.simmongs.product.ProductRepository;
@@ -70,4 +71,10 @@ public class WorkOrderController {
         return workOrderService.stopWorkOrder(obj);
     }
 
+    @PostMapping("searchWorkOrder") // 작업지시 검색
+    public List<SearchWorkOrderDto> searchWorkOrder(@RequestBody String json) throws JSONException {
+        JSONObject obj = new JSONObject(json);
+
+        return workOrderService.searchWorkOrder(obj);
+    }
 }
