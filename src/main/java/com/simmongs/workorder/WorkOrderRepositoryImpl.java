@@ -18,13 +18,13 @@ public class WorkOrderRepositoryImpl implements WorkOrderRepositoryCustom {
     private final JPAQueryFactory jpaQueryFactory;
 
     @Override
-    public List<SearchWorkOrderDto> findBySearchOption(String workOrderId, LocalDateTime startDate, LocalDateTime deadline, String productName, String workStatus) {
+    public List<SearchWorkOrderDto> findBySearchOption(String workOrderId, LocalDateTime startDate, LocalDateTime deadline, String productName, String departmentName, String workStatus) {
 
         List<SearchWorkOrderDto> result = jpaQueryFactory
                 .select(new QSearchWorkOrderDto(workOrders.workOrderId, workOrders.departmentName, workOrders.workDeadline, workOrders.productCode, products.productName, products.productUnit, workOrders.workCurrentQuantity, workOrders.workTargetQuantity, workOrders.workStatus))
                 .from(workOrders)
                 .leftJoin(products).on(workOrders.productCode.eq(products.productCode))
-                .where(eqWorkOrderId(workOrderId), betweenWorkDeadline(startDate, deadline), containsProductName(productName), eqWorkStatus(workStatus))
+                .where(eqWorkOrderId(workOrderId), betweenWorkDeadline(startDate, deadline), containsProductName(productName), eqDepartmentName(departmentName), eqWorkStatus(workStatus))
                 .fetch();
 
 
@@ -50,6 +50,13 @@ public class WorkOrderRepositoryImpl implements WorkOrderRepositoryCustom {
             return null;
         }
         return products.productName.contains(productName);
+    }
+
+    private BooleanExpression eqDepartmentName(String departmentName) {
+        if (departmentName == null || departmentName.isEmpty()) {
+            return null;
+        }
+        return workOrders.departmentName.eq(departmentName);
     }
 
     private BooleanExpression eqWorkStatus(String workStatus) {

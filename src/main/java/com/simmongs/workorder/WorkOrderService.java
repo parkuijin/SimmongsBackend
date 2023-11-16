@@ -211,11 +211,14 @@ public class WorkOrderService {
         String productName = null;
         if (obj.has("productName"))
             productName = obj.getString("productName");
+        String departmentName = null;
+        if (obj.has("departmentName"))
+            departmentName = obj.getString("departmentName");
         String workStatus = null;
         if (obj.has("workStatus"))
             workStatus = obj.getString("workStatus");
 
-        return workOrderRepository.findBySearchOption(workOrderId, startDate, deadline, productName, workStatus);
+        return workOrderRepository.findBySearchOption(workOrderId, startDate, deadline, productName, departmentName, workStatus);
     }
 
 }
