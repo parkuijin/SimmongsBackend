@@ -46,4 +46,8 @@ public class StoringUnStoring {
         this.storingUnstoringAmount = storingUnstoringAmount;
     }
 
+    public void changeProductName(String productName) {
+        this.productName = productName;
+    }
+
 }
