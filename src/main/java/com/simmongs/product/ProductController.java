@@ -23,19 +23,8 @@ public class ProductController { // Repository, Service 수행 후, API 응답�
     private final ProductService productService;
 
     @GetMapping("showAll") // 제품, 부품 전체 조회
-    public List<Products> ShowAllProducts() { return productRepository.findAll(); }
-
-    @PutMapping("updateProduct")
-    public Products UpdateProduct(@RequestBody String json) throws JSONException{
-
-        JSONObject obj = new JSONObject(json);
-        Long productId = Long.parseLong(obj.getString("productId"));
-        String productName = obj.getString("productName");
-        int productAmount = Integer.parseInt(obj.getString("productAmount"));
-        String productUnit = obj.getString("productUnit");
-
-        return productService.update(productId, productName, productAmount, productUnit);
-
+    public List<Products> ShowAllProducts(){
+        return productRepository.findAll();
     }
 
     @PostMapping("getNewProductId") // 신규 제품 ID 조회
@@ -43,16 +32,10 @@ public class ProductController { // Repository, Service 수행 후, API 응답�
 
         JSONObject obj = new JSONObject(json);
         String type = obj.getString("type");
-        JSONArray pidArr = obj.getJSONArray("productIdList");
-        List<String> exceptProductIdList = new ArrayList<>();
-
-        for( int i = 0; i < pidArr.length(); i++ )
-            exceptProductIdList.add(pidArr.getString(i));
-
 
         Map<String, Object> response = new HashMap<>();
 
-        String newProductCode = productService.generateNewProductCode(type, exceptProductIdList);
+        String newProductCode = productService.generateNewProductCode(type);
 
         if( newProductCode != null )
         {
@@ -75,12 +58,13 @@ public class ProductController { // Repository, Service 수행 후, API 응답�
 
         JSONObject obj = new JSONObject(json);
         String productCode = obj.getString("productId");
+        String productType = obj.getString("type");
 
         Map<String, Object> response = new HashMap<>();
 
         Products products = productService.checkProductIdByProductCode(productCode);
 
-        if( products != null )
+        if( products != null && products.getProductType().equals(productType) )
         {
             response.put("success", false);
             response.put("productId", products.getProductCode());
@@ -97,78 +81,29 @@ public class ProductController { // Repository, Service 수행 후, API 응답�
     }
 
 
-    @PostMapping("uploadBOM") // 부품, 상품 및 BOM 등록
-    public Map<String, Object> uploadBOM(@RequestBody String json) throws JSONException{
-
+    @PostMapping("uploadProduct") // 부품, 상품 및 BOM 등록
+    public Map<String, Object> uploadProduct(@RequestBody String json) throws JSONException {
         JSONObject obj = new JSONObject(json);
-        String uploadType = obj.getString("uploadType");
-        JSONArray componentArray = obj.getJSONArray("data");
 
-        Map<String, Object> response = new HashMap<>();
+        return productService.uploadProduct(obj);
+    }
 
-        if(uploadType.equals("component")) // 부품 등록
-        {
+    @PostMapping("updateProduct") // 부품, 상품 및 BOM 수정
+    public Map<String, Object> updateBOM(@RequestBody String json) throws JSONException {
+        JSONObject obj = new JSONObject(json);
 
-            switch( productService.uploadComponent(componentArray) )
-            {
-                case -1:
-                    response.put("success", false);
-                    response.put("message", "빈칸을 모두 채워주세요.");
-                    return response;
-                case -2:
-                    response.put("success", false);
-                    response.put("message", "품목코드가 중복됩니다.");
-                    return response;
-                case 0:
-                    response.put("success", true);
-                    return response;
-            }
-
-        }
-        else if(uploadType.equals("product")) // 제품 등록
-        {
-            String parent_product_code = obj.getString("productId");
-            parent_product_code = parent_product_code.toUpperCase().trim();
-            String parent_product_name = obj.getString("productName");
-            parent_product_name = parent_product_name.trim();
-            String parent_product_unit = obj.getString("productUnit");
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            LocalDateTime product_creation_date = LocalDateTime.now();
-
-            switch( productService.uploadProduct(parent_product_code, parent_product_name, parent_product_unit, componentArray) )
-            {
-                case -1:
-                    response.put("success", false);
-                    response.put("message", "모품목 코드가 중복이 됩니다.");
-                    return response;
-                case -2:
-                    response.put("success", false);
-                    response.put("message", "부품의 품목 코드가 존재하지 않습니다.");
-                    return response;
-                case -3:
-                    response.put("success", false);
-                    response.put("message", "빈칸을 모두 채워주세요.");
-                    return response;
-                case -4:
-                    response.put("success", false);
-                    response.put("message", "BOM 코드 생성에 실패하였습니다.(BOM 코드 생성 실패)");
-                    return response;
-                case 0:
-                    response.put("success", true);
-                    return response;
-            }
-        }
-        return null;
+        return productService.updateProduct(obj);
     }
 
 
     @PostMapping("searchKeyword") // 품목 키워드 검색
     public List<Products> searchKeyword(@RequestBody String json) throws JSONException, java.text.ParseException{
         JSONObject request_obj = new JSONObject(json);
+        String productType = request_obj.getString("type"); // 품목유형(제품, 부품)
+        productType = productType.equals("product") ? "제품" : "부품";
+        String keyword = request_obj.getString("keyword"); // 키워드
 
-        String keyword = request_obj.getString("keyword");
-
-        List<Products> foundProducts = productRepository.findSearchComponentByKeyword(keyword);
+        List<Products> foundProducts = productRepository.findSearchComponentByKeyword(productType, keyword);
 
         return foundProducts;
     }
@@ -193,23 +128,11 @@ public class ProductController { // Repository, Service 수행 후, API 응답�
         return response.toString();
     }
 
-    @PostMapping("deleteProduct") // 품목 삭제
+    @DeleteMapping("deleteProduct") // 품목 삭제
     public Map<String, Object> deleteProducts(@RequestBody String json) throws JSONException{
-
         JSONObject obj = new JSONObject(json);
-        String productId = obj.getString("productId");
 
-        Map<String, Object> response = new HashMap<>();
-
-
-        if (productService.deleteProductByProductCode(productId) > 0) {
-            response.put("success", true);
-        } else {
-            response.put("success", false);
-            response.put("reason", "ID IS NOT EXISTS");
-        }
-
-        return response;
+        return productService.deleteProduct(obj);
     }
 
     @PostMapping("overview") // 품목 개요

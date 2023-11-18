@@ -48,6 +48,26 @@ public class Products { // 데이터를 저장할 Entity Class
         this.productCreationDate = productCreationDate;
     }
 
+    public void changeProductCode(String productCode){
+        this.productCode = productCode;
+    }
+
+    public void changeProductName(String productName){
+        this.productName = productName;
+    }
+
+    public void changeProductAmount(int productAmount){
+        this.productAmount = productAmount;
+    }
+
+    public void changeProductUnit(String productUnit){
+        this.productUnit = productUnit;
+    }
+
+    public void changeProductType(String productType){
+        this.productType = productType;
+    }
+
     public void update(String productName, Integer productAmount, String productUnit) {
         this.productName = productName;
         this.productAmount = productAmount;

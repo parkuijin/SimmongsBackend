@@ -2,6 +2,14 @@ package com.simmongs.product;
 
 import com.simmongs.bom.BOMRepository;
 import com.simmongs.bom.BOMs;
+import com.simmongs.mrp.MRPRepository;
+import com.simmongs.mrp.MRPs;
+import com.simmongs.storingunstoring.StoringUnStoring;
+import com.simmongs.storingunstoring.StoringUnStoringRepository;
+import com.simmongs.usedcode.UsedCodeRepository;
+import com.simmongs.usedcode.UsedCodes;
+import com.simmongs.workorder.WorkOrderRepository;
+import com.simmongs.workorder.WorkOrders;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -10,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Transactional(readOnly = true)
@@ -20,53 +30,31 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final BOMRepository bomRepository;
+    private final StoringUnStoringRepository storingUnStoringRepository;
+    private final WorkOrderRepository workOrderRepository;
+    private final MRPRepository mrpRepository;
+    private final UsedCodeRepository usedCodeRepository;
 
     @Transactional
-    public Products update(Long id, String name, int amount, String unit) {
-        Products products = productRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("ID IS NOT EXISTS"));
+    public String generateNewProductCode(String type) {
+        String productCode;
+        UsedCodes usedCodes = usedCodeRepository.findAll().get(0);
 
-        products.update(name, amount, unit);
-
-        return products;
-    }
-
-    @Transactional
-    public String generateNewProductCode(String type, List<String> exceptProductIdList){ // productCode 생성
-
-        if( type.equals("product") ) // 생성 타입이 제품(product)일 경우
-        {
-            for( int i = 0; i < 100000; i++ )
-            {
-                String productCode = "P" + String.format("%05d", i);
-
-                if( exceptProductIdList.contains(productCode) )
-                    continue;
-
-                Optional<Products> products = productRepository.findByProductCode(productCode);
-                if( !products.isPresent() ) // productCode가 존재하지 않을 경우
-                    return productCode;
-            }
-        }
-        else if( type.equals("component") )
-        {
-            for( int i = 0; i < 100000; i++ )
-            {
-                String productCode = "C" + String.format("%05d", i);
-
-                if( exceptProductIdList.contains(productCode) )
-                    continue;
-
-                Optional<Products> products = productRepository.findByProductCode(productCode);
-                if( !products.isPresent() ) // productCode가 존재하지 않을 경우
-                    return productCode;
-            }
+        if (type.equals("제품")) { // 생성 타입이 제품(product)일 경우
+            productCode = "P" + String.format("%05d", usedCodes.getUsedProductCode() + 1);
+            usedCodes.usedProductCodeUpdate();
+            return productCode;
+        } else if (type.equals("부품")) {
+            productCode = "C" + String.format("%05d", usedCodes.getUsedComponentCode() + 1);
+            usedCodes.usedComponentCodeUpdate();
+            return productCode;
         }
 
         return null;
     }
 
     @Transactional
-    public Products checkProductIdByProductCode(String productCode){ // productCode로 product_id 조회
+    public Products checkProductIdByProductCode(String productCode){ // productCode로 productId 조회
         Optional<Products> products = productRepository.findByProductCode(productCode);
         if( products.isPresent() )
             return products.get();
@@ -75,9 +63,18 @@ public class ProductService {
     }
 
     @Transactional
-    public int deleteProductByProductCode(String productCode){ // productCode로 product 삭제
+    public Map<String, Object> deleteProduct(JSONObject obj){
+        Map<String, Object> response = new HashMap<>();
 
-        // BOMs 테이블에서 productCode를 가지고 있는 row 삭제
+        String productCode = obj.getString("productCode");
+
+        if (productCode.equals("")) {
+            response.put("success", false);
+            response.put("message", "빈칸을 입력해주세요.");
+            return response;
+        }
+
+        // BOM 테이블에서 해당되는 값 삭제
         List<BOMs> boms = bomRepository.findByProductCode(productCode);
         for( BOMs bom : boms )
             bomRepository.delete(bom);
@@ -86,120 +83,102 @@ public class ProductService {
         for( BOMs bom : boms2 )
             bomRepository.delete(bom);
 
+        // Product 테이블에서 해당되는 값 삭제
         Optional<Products> products = productRepository.findByProductCode(productCode);
         if( products.isPresent() )
-        {
             productRepository.delete(products.get());
-            return 1;
+
+        List<WorkOrders> workOrdersList = workOrderRepository.searchByProductCode(productCode);
+        for (int i=0; i<workOrdersList.size(); i++) {
+            WorkOrders workOrders = workOrdersList.get(i);
+
+            // WorkOrder 테이블에서 해당되는 값을 중단상태로 변경
+            workOrders.stopWorkOrder();
+
+            // 중단된 작업지시에 해당되는 MRP를 삭제
+            List<MRPs> mrps = mrpRepository.findByWorkOrderId(workOrders.getWorkOrderId());
+            for (int j=0; j<mrps.size(); j++)
+                mrpRepository.delete(mrps.get(j));
         }
-        else
-            return 0;
+
+        response.put("success", true);
+        return response;
     }
 
     @Transactional
-    public int uploadComponent(JSONArray componentArray) throws JSONException // 부품(Component) 신규 등록
-    {
+    public Map<String, Object> uploadProduct(JSONObject obj) throws JSONException {
 
-        // 검증 단계
-        for( int i = 0; i < componentArray.length(); i++ )
-        {
-            JSONObject componentObj = componentArray.getJSONObject(i);
-            String product_code = componentObj.getString("productId");
-            product_code = product_code.toUpperCase().trim();
-            String product_name = componentObj.getString("productName");
-            product_name = product_name.trim();
-            String product_unit = componentObj.getString("productUnit");
+        Map<String, Object> response = new HashMap<>();
+        LocalDateTime productCreationDate = LocalDateTime.now();
 
-            if( product_code.trim().equals("") || product_name.trim().equals("") || product_unit.trim().equals("") )
-                return -1;
+        String productType = obj.getString("productType");
+        String productCode = obj.getString("productCode");
+        String productName = obj.getString("productName");
+        String productUnit = obj.getString("productUnit");
+        Integer productAmount = obj.getInt("productAmount");
 
-            Optional<Products> products = productRepository.findByProductCode(product_code);
-            if( products.isPresent() ) // productCode가 존재할 경우
-                return -2;
+        // ProductCode 중복 확인
+        Optional<Products> CodeCheck = productRepository.findByProductCode(productCode);
+        if (CodeCheck.isPresent()) {
+            if (productType.equals("제품")) {
+                response.put("success", false);
+                response.put("message", "제품 코드가 이미 존재합니다.");
+                return response;
+            } else if (productType.equals("부품")) {
+                response.put("success", false);
+                response.put("message", "부품 코드가 이미 존재합니다.");
+                return response;
+            }
         }
 
-        // 생성 단계
-        for( int i = 0; i < componentArray.length(); i++ )
-        {
-            JSONObject componentObj = componentArray.getJSONObject(i);
-            String product_code = componentObj.getString("productId");
-            product_code = product_code.toUpperCase().trim();
-            String product_name = componentObj.getString("productName");
-            product_name = product_name.trim();
-            int product_amount = 0;
-            String product_unit = componentObj.getString("productUnit");
-            String product_type = "부품";
+        // Product 등록
+        Products products = new Products(productCode, productName, productAmount, productUnit, productType, productCreationDate);
+        productRepository.save(products);
 
-            LocalDateTime product_creation_date = LocalDateTime.now();
-
-            Products product = new Products(product_code, product_name, product_amount, product_unit, product_type, product_creation_date);
-            productRepository.save(product);
-        }
-        return 0;
+        response.put("success", true);
+        return response;
     }
 
     @Transactional
-    public int uploadProduct(String parentProductCode, String parentProductName, String parentProductUnit, JSONArray componentArray) throws JSONException // 제품(Product) 신규 등록
-    {
-        LocalDateTime product_creation_date = LocalDateTime.now();
+    public Map<String, Object> updateProduct(JSONObject obj) throws JSONException { // 제품(Product) 수정
 
-        // parentProductCode 중복 확인
-        Optional<Products> products = productRepository.findByProductCode(parentProductCode);
-        if( products.isPresent() ) // parentProductCode가 이미 존재할 경우
-            return -1;
+        Map<String, Object> response = new HashMap<>();
 
-        // 검증 단계
-        for( int i = 0; i < componentArray.length(); i++ )
-        {
-            JSONObject componentObj = componentArray.getJSONObject(i);
-            String child_product_code = componentObj.getString("productId");
-            int product_amount = 0;
-            try{
-                product_amount = componentObj.getInt("productAmount");
-            } catch(Exception e){}
+        String productCode = obj.getString("productCode");
+        String productName = obj.getString("productName");
+        Integer productAmount = obj.getInt("productAmount");
+        String productUnit = obj.getString("productUnit");
 
-            Optional<Products> child_products = productRepository.findByProductCode(child_product_code);
-            if( !child_products.isPresent() ) // child_product_code가 존재하지 않을 경우
-                return -2;
-
-            if(child_product_code.trim().equals("") || product_amount <= 0)
-            {
-                return -3;
-            }
+        // Null 체크
+        if (productCode.equals("") || productName.equals("") || productAmount == null || productUnit.equals("")) {
+            response.put("success", false);
+            response.put("message", "빈칸을 채워주세요.");
+            return response;
         }
 
-        // 생성 단계
-        for( int i = 0; i < componentArray.length(); i++ )
-        {
-            JSONObject componentObj = componentArray.getJSONObject(i);
-            String child_product_code = componentObj.getString("productId");
-            int product_amount = componentObj.getInt("productAmount");
-
-
-            // BOMs 테이블에 추가
-            String new_bom_code = null;
-            for( int j = 0; j < 100000; j++ ) // BOM 코드 생성
-            {
-                String bom_code = "B" + String.format("%05d", j);
-                Optional<BOMs> boms = bomRepository.findByBomId(bom_code);
-                if( !boms.isPresent() ) // bomCode가 존재하지 않을 경우
-                {
-                    new_bom_code = bom_code;
-                    break;
-                }
-            }
-
-            if( new_bom_code == null )
-                return -4;
-
-            BOMs bom = new BOMs(new_bom_code, parentProductCode, child_product_code, product_amount);
-            bomRepository.save(bom);
+        // productCode 존재 여부 확인
+        Optional<Products> productExistCheck = productRepository.findByProductCode(productCode);
+        if (!productExistCheck.isPresent()) { // productCode 존재하지 않을 경우
+            response.put("success", false);
+            response.put("message", "제품, 부품 코드가 존재하지 않습니다.");
+            return response;
         }
 
-        // Products 테이블에 추가
-        Products product = new Products(parentProductCode, parentProductName, 0, parentProductUnit, "제품", product_creation_date);
-        productRepository.save(product);
-        return 0;
+        // 입출고 목록에서 수정된 제품, 부품 이름으로 수정
+        List <StoringUnStoring> storingUnStoringList = storingUnStoringRepository.findByProductCode(productCode);
+        for (int i=0; i<storingUnStoringList.size(); i++) {
+            StoringUnStoring storingUnStoring = storingUnStoringList.get(i);
+            storingUnStoring.changeProductName(productName);
+        }
+
+        // 제품, 부품 수정
+        Products product = productRepository.getByProductCode(productCode);
+        product.changeProductName(productName);
+        product.changeProductAmount(productAmount);
+        product.changeProductUnit(productUnit);
+
+        response.put("success", true);
+        return response;
     }
 
     @Transactional
@@ -227,13 +206,14 @@ public class ProductService {
                         List<Products> allProducts2 = productRepository.findAll();
                         for( Products product2 : allProducts2 )
                         {
-                            if( product2.getProductCode().equals(bom.getProductCode()) )
+                            if( product2.getProductCode().equals(bom.getChildProductCode()) )
                             {
                                 JSONObject childProductObj = new JSONObject();
                                 childProductObj.put("bomId", bom.getBomId());
                                 childProductObj.put("productId", product2.getProductCode());
                                 childProductObj.put("productName", product2.getProductName());
-                                childProductObj.put("productAmount", bom.getBomAmount());
+                                childProductObj.put("productAmount", product2.getProductAmount());
+                                childProductObj.put("bomAmount", bom.getBomAmount());
                                 childProductObj.put("productUnit", product2.getProductUnit());
                                 childProductObj.put("productType", product2.getProductType());
                                 childProductObj.put("productCreationDate", product2.getProductCreationDate().toLocalDate());
@@ -248,7 +228,6 @@ public class ProductService {
         }
 
         return productArr;
-
-    }
+    } // findSearchProduct
 
 }

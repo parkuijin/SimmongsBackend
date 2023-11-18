@@ -38,9 +38,9 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
                 PRODUCT_TB
             where
                 ( PRODUCT_CODE LIKE %:keyword% OR PRODUCT_NAME LIKE %:keyword% )
-                AND PRODUCT_TYPE = '부품'
+                AND PRODUCT_TYPE = :productType
             """, nativeQuery = true)
-    List<Products> findSearchComponentByKeyword(@Param("keyword") String keyword);
+    List<Products> findSearchComponentByKeyword(@Param("productType") String productType, @Param("keyword") String keyword);
 
     Optional<Products> findByProductCode(String productCode);
 
@@ -53,4 +53,5 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
                 PRODUCT_CODE = :productCode
             """, nativeQuery = true)
     Products getByProductCode(String productCode);
+
 }
