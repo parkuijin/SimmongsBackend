@@ -1,0 +1,44 @@
+version: "3.8"
+services:
+  database:
+    container_name: mysql-container
+    image: mysql:8.1.0
+    restart: always
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./database:/var/lib/mysql
+    env_file:
+      - .env
+    command:
+      - "mysqld"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    healthcheck:
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+      interval: 3s
+      timeout: 20s
+      retries: 10
+    networks:
+      - simmongs-network
+
+
+  application:
+    container_name: simmongs-container
+    build:
+      context: ./
+      dockerfile: dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      -  database
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-container:3306/SIMMONGS_DB?useSSL=false&allowPublicKeyRetrieval=true&useUnicode=true&serverTimezone=Asia/Seoul
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    networks:
+      - simmongs-network
+
+networks:
+  simmongs-network:
