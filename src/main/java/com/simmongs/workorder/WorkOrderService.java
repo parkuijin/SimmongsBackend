@@ -1,6 +1,5 @@
 package com.simmongs.workorder;
 
-import com.querydsl.core.Tuple;
 import com.simmongs.bom.BOMRepository;
 import com.simmongs.bom.BOMs;
 import com.simmongs.department.DepartmentRepository;
@@ -89,8 +88,6 @@ public class WorkOrderService {
                     // 작업지시 등록
                     WorkOrders workOrders = new WorkOrders(newWorkOrderId, departmentName, workStartDate, productCode, workTargetQuantity, workDeadline, "준비");
                     workOrderId = workOrderRepository.save(workOrders).getWorkOrderId();
-                    response.put("success", true);
-                    response.put("id", workOrderId);
                     break;
                 }
             }
@@ -112,18 +109,27 @@ public class WorkOrderService {
             mrpRepository.save(mrps);
         }
 
+        response.put("success", true);
+        response.put("id", workOrderId);
         return response;
     }
 
     @Transactional
-    public Map<String, Object> workOrderDelete (String workOrderId) throws JSONException {
+    public Map<String, Object> workOrderDelete (String workOrderId) {
         Map<String, Object> response = new HashMap<>();
 
         WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workOrderId);
+        List<MRPs> mrpList = mrpRepository.findByWorkOrderId(workOrderId);
 
         // 작업지시는 준비 상태에서만 삭제 가능
         if (workOrders.getWorkStatus().equals("준비")) {
+            // 작업지시 삭제
             workOrderRepository.delete(workOrders);
+            // MRP 삭제
+            for (int i=0; i<mrpList.size(); i++) {
+                MRPs mrps = mrpList.get(i);
+                mrpRepository.delete(mrps);
+            }
             response.put("success", true);
             return response;
         }
@@ -172,8 +178,12 @@ public class WorkOrderService {
                         hashMap.put("departmentName", workOrders.getDepartmentName());
                         hashMap.put("workDeadline", workOrders.getWorkDeadline().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
                         hashMap.put("productCode", workOrders.getProductCode());
-                        hashMap.put("productName", productRepository.getByProductCode(workOrders.getProductCode()).getProductName());
-                        hashMap.put("productUnit", productRepository.getByProductCode(workOrders.getProductCode()).getProductUnit());
+                        if (productRepository.getByProductCode(workOrders.getProductCode()).getProductName().equals("") || productRepository.getByProductCode(workOrders.getProductCode()).getProductName().isEmpty()) {
+                            hashMap.put("productName", "NA");
+                        } else { hashMap.put("productName", productRepository.getByProductCode(workOrders.getProductCode()).getProductName()); }
+                        if (productRepository.getByProductCode(workOrders.getProductCode()).getProductUnit().equals("") || productRepository.getByProductCode(workOrders.getProductCode()).getProductUnit().isEmpty()) {
+                            hashMap.put("productUnit", "NA");
+                        } else { hashMap.put("productUnit", productRepository.getByProductCode(workOrders.getProductCode()).getProductUnit()); }
                         hashMap.put("workCurrentQuantity", workOrders.getWorkCurrentQuantity());
                         hashMap.put("workTargetQuantity", workOrders.getWorkTargetQuantity());
                         hashMap.put("workStatus", workOrders.getWorkStatus());

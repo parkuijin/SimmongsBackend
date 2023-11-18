@@ -166,6 +166,17 @@ public class WorkPerformanceService {
         // 작업지시 진행량 차감
         workOrders.workCurrentQuantitySub(currentWorkload);
 
+        // 작업 지시의 상태를 변경
+        if (workOrders.getWorkCurrentQuantity() == 0) {
+            workOrders.underWayWorkOrder();
+        } else if (workOrders.getWorkCurrentQuantity() >= 1 && workOrders.getWorkCurrentQuantity() < workOrders.getWorkTargetQuantity()) {
+            workOrders.underWayWorkOrder(); // 작업상태 진행으로 변경 : 1 <= currentQuantity < targetQuantity
+        } else if (workOrders.getWorkCurrentQuantity() == workOrders.getWorkTargetQuantity()) {
+            workOrders.completeWorkOrder(); // 작업상태 완료로 변경 : currentQuantity = targetQuantity
+        } else if (workOrders.getWorkCurrentQuantity() >= workOrders.getWorkTargetQuantity()) {
+            workOrders.overWorkOrder(); // 작업상태 초과로 변경 : currentQuantity <= targetQuantity
+        }
+
         response.put("success", true);
         return response;
     }
@@ -174,11 +185,20 @@ public class WorkPerformanceService {
     public List<HashMap<String, Object>> MRPCalculation(JSONArray mrpCalcArr) throws JSONException {
 
         List<HashMap<String, Object>> response = new ArrayList<HashMap<String, Object>>();
+        List<HashMap<String, Object>> errResponse = new ArrayList<HashMap<String, Object>>();
 
         for (int i = 0; i < mrpCalcArr.length(); i++) {
             JSONObject obj = mrpCalcArr.getJSONObject(i);
             String workOrderId = obj.getString("workOrderId");
             int currentWorkload = obj.getInt("currentWorkload");
+
+            if (workOrderRepository.getByWorkOrderId(workOrderId).getWorkStatus().equals("중단")) {
+                HashMap<String, Object> errHashMap = new HashMap<>();
+                errHashMap.put("success", false);
+                errHashMap.put("message", "중단된 작업지시가 포함되어 있습니다.");
+                errResponse.add(errHashMap);
+                return errResponse;
+            }
 
             List<BOMs> boMsList = bomRepository.findByProductCode(workOrderRepository.getByWorkOrderId(workOrderId).getProductCode());
             for (BOMs boms : boMsList) {
@@ -212,9 +232,13 @@ public class WorkPerformanceService {
         List<WorkPerformance> workPerformanceList = workPerformanceRepository.findByWorkNumber(workNumber);
         for (WorkPerformance workPerformance : workPerformanceList) {
             Map<String, Object> map = new HashMap<>();
-            map.put("componentName", productRepository.getByProductCode(workPerformance.getUsedProductCode()).getProductName());
+            if (productRepository.findByProductCode(workPerformance.getUsedProductCode()).isPresent())
+                map.put("componentName", productRepository.getByProductCode(workPerformance.getUsedProductCode()).getProductName());
+            else map.put("componentName", "NA");
             map.put("componentCode",workPerformance.getUsedProductCode());
-            map.put("componentUnit", productRepository.getByProductCode(workPerformance.getUsedProductCode()).getProductUnit());
+            if (productRepository.findByProductCode(workPerformance.getUsedProductCode()).isPresent())
+                map.put("componentUnit", productRepository.getByProductCode(workPerformance.getUsedProductCode()).getProductUnit());
+            else map.put("componentUnit", "NA");
             map.put("usedComponentAmount", workPerformance.getUsedProductAmount());
             response.add(map);
         }

@@ -60,6 +60,8 @@ public class WorkOrders {
         this.workCurrentQuantity -= currentWorkLoad;
     }
 
+    public void readyWorkOrder() { this.workStatus = "준비"; }
+
     public void underWayWorkOrder() { this.workStatus = "진행"; }
 
     public void stopWorkOrder() { this.workStatus = "중단"; }

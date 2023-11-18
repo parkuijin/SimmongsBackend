@@ -21,7 +21,7 @@ public class WorkOrderRepositoryImpl implements WorkOrderRepositoryCustom {
     public List<SearchWorkOrderDto> findBySearchOption(String workOrderId, LocalDateTime startDate, LocalDateTime deadline, String productName, String departmentName, String workStatus) {
 
         List<SearchWorkOrderDto> result = jpaQueryFactory
-                .select(new QSearchWorkOrderDto(workOrders.workOrderId, workOrders.departmentName, workOrders.workDeadline, workOrders.productCode, products.productName, products.productUnit, workOrders.workCurrentQuantity, workOrders.workTargetQuantity, workOrders.workStatus))
+                .select(new QSearchWorkOrderDto(workOrders.workOrderId, workOrders.departmentName.coalesce("NA"), workOrders.workDeadline, workOrders.productCode, products.productName.coalesce("NA"), products.productUnit.coalesce("NA"), workOrders.workCurrentQuantity, workOrders.workTargetQuantity, workOrders.workStatus))
                 .from(workOrders)
                 .leftJoin(products).on(workOrders.productCode.eq(products.productCode))
                 .where(eqWorkOrderId(workOrderId), betweenWorkDeadline(startDate, deadline), containsProductName(productName), eqDepartmentName(departmentName), eqWorkStatus(workStatus))

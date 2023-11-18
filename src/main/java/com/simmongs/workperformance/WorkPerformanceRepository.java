@@ -26,7 +26,7 @@ public interface WorkPerformanceRepository extends JpaRepository<WorkPerformance
 
     @Query(value = """
             select distinct 
-                p.PRODUCT_NAME as productName, wp.WORK_ORDER_ID as workOrderId, wp.WORK_NUMBER as workNumber, date_format(wp.WORK_PERFORMANCE_DATE, '%Y-%m-%d') as workPerformanceDate, wp.CURRENT_WORKLOAD as currentWorkload
+                COALESCE(p.PRODUCT_NAME, 'NA') as productNamem, wp.WORK_ORDER_ID as workOrderId, wp.WORK_NUMBER as workNumber, date_format(wp.WORK_PERFORMANCE_DATE, '%Y-%m-%d') as workPerformanceDate, wp.CURRENT_WORKLOAD as currentWorkload
             from 
                 WORK_PERFORMANCE_TB as wp
                 left join WORK_ORDER_TB as wo on wp.WORK_ORDER_ID = wo.WORK_ORDER_ID

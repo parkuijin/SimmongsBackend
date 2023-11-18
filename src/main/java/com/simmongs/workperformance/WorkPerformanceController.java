@@ -89,7 +89,7 @@ public class WorkPerformanceController {
         return workPerformanceService.showWorkPerformance(obj);
     }
 
-    @PostMapping("showUsedComponent") //
+    @PostMapping("showUsedComponent") // 작업실적 ID를 받아서 사용한 부품 목록 출력
     public List<Map<String, Object>> showUsedComponent(@RequestBody String json) throws JSONException {
         JSONObject obj = new JSONObject(json);
 
