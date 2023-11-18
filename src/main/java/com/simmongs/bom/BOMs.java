@@ -23,9 +23,4 @@ public class BOMs {
     @Column(name = "BOM_AMOUNT")
     private int bomAmount;
 
-    public BOMs(String product_code, String child_product_code, int bom_amount) {
-        this.productCode = product_code;
-        this.childProductCode = child_product_code;
-        this.bomAmount = bom_amount;
-    }
 }
