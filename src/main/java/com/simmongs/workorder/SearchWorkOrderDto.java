@@ -12,6 +12,7 @@ public class SearchWorkOrderDto {
 
     private String workOrderId;
     private String departmentName;
+    private LocalDateTime workStartDate;
     private LocalDateTime workDeadline;
     private String productCode;
     private String productName;
@@ -21,9 +22,10 @@ public class SearchWorkOrderDto {
     private String workStatus;
 
     @QueryProjection
-    public SearchWorkOrderDto(String workOrderId, String departmentName, LocalDateTime workDeadline, String productCode, String productName, String productUnit, int workCurrentQuantity, int workTargetQuantity, String workStatus) {
+    public SearchWorkOrderDto(String workOrderId, String departmentName,LocalDateTime workStartDate, LocalDateTime workDeadline, String productCode, String productName, String productUnit, int workCurrentQuantity, int workTargetQuantity, String workStatus) {
         this.workOrderId = workOrderId;
         this.departmentName = departmentName;
+        this.workStartDate = workStartDate;
         this.workDeadline = workDeadline;
         this.productCode = productCode;
         this.productName = productName;

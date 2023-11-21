@@ -22,17 +22,13 @@ import java.util.*;
 @RequestMapping(value = "workorder")
 public class WorkOrderController {
 
-    private final WorkOrderRepository workOrderRepository;
     private final WorkOrderService workOrderService;
 
     @PostMapping("mrpCalculation") // 제품 목표수량 입력하면 필요한 부품 총개수 계산
     public List<HashMap<String, Object>> MRPCalculation(@RequestBody String json) throws JSONException {
-
         JSONObject obj = new JSONObject(json);
-        String productCode = obj.getString("productCode");
-        Integer workTargetQuantity = Integer.parseInt(obj.getString("workTargetQuantity"));
 
-        return workOrderService.mrpCalculation(productCode, workTargetQuantity);
+        return workOrderService.mrpCalculation(obj);
     }
 
     @PostMapping("registration") // 작업지시 등록

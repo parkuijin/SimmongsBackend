@@ -6,8 +6,10 @@ import static com.simmongs.product.QProducts.products;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 
+import com.simmongs.product.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,15 +20,14 @@ public class WorkOrderRepositoryImpl implements WorkOrderRepositoryCustom {
     private final JPAQueryFactory jpaQueryFactory;
 
     @Override
-    public List<SearchWorkOrderDto> findBySearchOption(String workOrderId, LocalDateTime startDate, LocalDateTime deadline, String productName, String departmentName, String workStatus) {
+    public List<SearchWorkOrderDto> findBySearchOption(String workOrderId, LocalDateTime startDate, LocalDateTime deadline, String productCode, String departmentName, String workStatus) {
 
         List<SearchWorkOrderDto> result = jpaQueryFactory
-                .select(new QSearchWorkOrderDto(workOrders.workOrderId, workOrders.departmentName.coalesce("NA"), workOrders.workDeadline, workOrders.productCode, products.productName.coalesce("NA"), products.productUnit.coalesce("NA"), workOrders.workCurrentQuantity, workOrders.workTargetQuantity, workOrders.workStatus))
+                .select(new QSearchWorkOrderDto(workOrders.workOrderId, workOrders.departmentName.coalesce("NA"),workOrders.workStartDate, workOrders.workDeadline, workOrders.productCode, products.productName.coalesce("NA"), products.productUnit.coalesce("NA"), workOrders.workCurrentQuantity, workOrders.workTargetQuantity, workOrders.workStatus))
                 .from(workOrders)
                 .leftJoin(products).on(workOrders.productCode.eq(products.productCode))
-                .where(eqWorkOrderId(workOrderId), betweenWorkDeadline(startDate, deadline), containsProductName(productName), eqDepartmentName(departmentName), eqWorkStatus(workStatus))
+                .where(eqWorkOrderId(workOrderId), betweenWorkDeadline(startDate, deadline), eqProductCode(productCode), eqDepartmentName(departmentName), eqWorkStatus(workStatus))
                 .fetch();
-
 
         return result;
     }
@@ -45,11 +46,11 @@ public class WorkOrderRepositoryImpl implements WorkOrderRepositoryCustom {
         return workOrders.workDeadline.between(startDate, deadline);
     }
 
-    private BooleanExpression containsProductName(String productName) {
-        if (productName == null || productName.isEmpty()) {
+    private BooleanExpression eqProductCode(String productCode) {
+        if (productCode == null || productCode.isEmpty()) {
             return null;
         }
-        return products.productName.contains(productName);
+        return workOrders.productCode.eq(productCode);
     }
 
     private BooleanExpression eqDepartmentName(String departmentName) {

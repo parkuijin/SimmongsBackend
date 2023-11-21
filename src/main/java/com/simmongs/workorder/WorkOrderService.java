@@ -140,10 +140,22 @@ public class WorkOrderService {
     }
 
     @Transactional
-    public List<HashMap<String, Object>> mrpCalculation (String productCode, Integer workTargetQuantity) {
+    public List<HashMap<String, Object>> mrpCalculation (JSONObject obj) throws JSONException {
         List<HashMap<String, Object>> response = new ArrayList<HashMap<String, Object>>();
-        List<BOMs> boMsList = bomRepository.findByProductCode(productCode);
+        List<HashMap<String, Object>> errResponse = new ArrayList<HashMap<String, Object>>();
 
+        String productCode = obj.getString("productCode");
+        Integer workTargetQuantity = Integer.parseInt(obj.getString("workTargetQuantity"));
+
+        if (workTargetQuantity == null || workTargetQuantity < 1) {
+            HashMap<String, Object> hashMap = new HashMap<>();
+            hashMap.put("success", false);
+            hashMap.put("message", "목표수량을 입력해주세요.");
+            errResponse.add(hashMap);
+            return errResponse;
+        }
+
+        List<BOMs> boMsList = bomRepository.findByProductCode(productCode);
         for (BOMs boms : boMsList) {
             HashMap<String, Object> hashMap = new HashMap<>();
             Products products = productRepository.getByProductCode(boms.getChildProductCode());
@@ -213,14 +225,14 @@ public class WorkOrderService {
             workOrderId = obj.getString("workOrderId");
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         LocalDateTime startDate = null;
-        if(obj.has("startDate"))
+        if(obj.has("startDate") && !obj.getString("startDate").equals(""))
             startDate = LocalDateTime.parse(obj.getString("startDate"), formatter);
         LocalDateTime deadline = null;
-        if (obj.has("deadline"))
+        if (obj.has("deadline") && !obj.getString("deadline").equals(""))
             deadline = LocalDateTime.parse(obj.getString("deadline"), formatter);
-        String productName = null;
-        if (obj.has("productName"))
-            productName = obj.getString("productName");
+        String productCode = null;
+        if (obj.has("productCode"))
+            productCode = obj.getString("productCode");
         String departmentName = null;
         if (obj.has("departmentName"))
             departmentName = obj.getString("departmentName");
@@ -228,7 +240,7 @@ public class WorkOrderService {
         if (obj.has("workStatus"))
             workStatus = obj.getString("workStatus");
 
-        return workOrderRepository.findBySearchOption(workOrderId, startDate, deadline, productName, departmentName, workStatus);
+        return workOrderRepository.findBySearchOption(workOrderId, startDate, deadline, productCode, departmentName, workStatus);
     }
 
 }
