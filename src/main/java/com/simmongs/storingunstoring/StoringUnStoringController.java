@@ -25,16 +25,14 @@ public class StoringUnStoringController {
         Map<String, Object> response = new HashMap<>();
         JSONObject obj = new JSONObject(json);
 
-        String storingUnstoringType = obj.getString("storingUnstoringType");
-        String productCode = obj.getString("productCode");
-        String productName = obj.getString("productName");
-        String productType = obj.getString("productType");
-        int storingUnstoringAmount = Integer.parseInt(obj.getString("storingUnstoringAmount"));
-
-        switch (storingUnStoringService.RegStoringUnStoring(storingUnstoringType, productCode, productName, productType, storingUnstoringAmount)) {
+        switch (storingUnStoringService.RegStoringUnStoring(obj)) {
             case -1:
                 response.put("success", true);
                 response.put("message", "출고할 제품 개수가 부족합니다.");
+                return response;
+            case -2:
+                response.put("success", true);
+                response.put("message", "부품만 발주할 수 있습니다.");
                 return response;
             case 0:
                 response.put("success", true);
@@ -49,5 +47,11 @@ public class StoringUnStoringController {
         return storingUnStoringRepository.findAll();
     }
 
+    @PostMapping("searchStoringUnstoring")
+    public List<StoringUnStoring> SearchStoringUnStoring(@RequestBody String json) throws JSONException {
+        JSONObject obj = new JSONObject(json);
+
+        return storingUnStoringService.searchStoringUnstoring(obj);
+    }
 
 }
