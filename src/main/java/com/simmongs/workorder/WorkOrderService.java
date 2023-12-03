@@ -188,7 +188,8 @@ public class WorkOrderService {
                     if (workOrders.getWorkDeadline().getMonth().toString().equals(localDateTime.getMonth().toString())) {
                         hashMap.put("workOrderId", workOrders.getWorkOrderId());
                         hashMap.put("departmentName", workOrders.getDepartmentName());
-                        hashMap.put("workDeadline", workOrders.getWorkDeadline().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                        hashMap.put("workStartDate", workOrders.getWorkStartDate());
+                        hashMap.put("workDeadline", workOrders.getWorkDeadline());
                         hashMap.put("productCode", workOrders.getProductCode());
                         if (productRepository.getByProductCode(workOrders.getProductCode()).getProductName().equals("") || productRepository.getByProductCode(workOrders.getProductCode()).getProductName().isEmpty()) {
                             hashMap.put("productName", "NA");
@@ -239,8 +240,11 @@ public class WorkOrderService {
         String workStatus = null;
         if (obj.has("workStatus"))
             workStatus = obj.getString("workStatus");
+        String productName = null;
+        if (obj.has("productName"))
+            productName = obj.getString("productName");
 
-        return workOrderRepository.findBySearchOption(workOrderId, startDate, deadline, productCode, departmentName, workStatus);
+        return workOrderRepository.findBySearchOption(workOrderId, startDate, deadline, productCode, departmentName, workStatus, productName);
     }
 
 }

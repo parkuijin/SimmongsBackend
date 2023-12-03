@@ -31,4 +31,6 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrders, Long>, Wo
                 PRODUCT_CODE = :code
             """, nativeQuery = true)
     List<WorkOrders> searchByProductCode(String code);
+
+    List<WorkOrders> findByDepartmentName(String departmentName);
 }
