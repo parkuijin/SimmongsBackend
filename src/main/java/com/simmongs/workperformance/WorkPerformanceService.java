@@ -6,6 +6,8 @@ import com.simmongs.mrp.MRPRepository;
 import com.simmongs.mrp.MRPs;
 import com.simmongs.product.ProductRepository;
 import com.simmongs.product.Products;
+import com.simmongs.storingunstoring.StoringUnStoring;
+import com.simmongs.storingunstoring.StoringUnStoringRepository;
 import com.simmongs.workorder.WorkOrderRepository;
 import com.simmongs.workorder.WorkOrders;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -28,6 +32,7 @@ public class WorkPerformanceService {
     private final ProductRepository productRepository;
     private final MRPRepository mrpRepository;
     private final BOMRepository bomRepository;
+    private final StoringUnStoringRepository storingUnStoringRepository;
 
     @Transactional
     public int uploadWorkPerformance(JSONObject obj) {
@@ -107,6 +112,13 @@ public class WorkPerformanceService {
                 // MRP 테이블 사용한 부품 개수 증가
                 MRPs mrps = mrpRepository.getByNeededProductCode(workOrderId, usedProductCode);
                 mrps.currentUsedProductAmountAdd(usedProductAmount);
+
+                LocalDateTime localDateTime = LocalDateTime.now();
+
+                // 부품 출고 등록
+                StoringUnStoring storingUnStoring = new StoringUnStoring(localDateTime, "출고", products.getProductCode(), products.getProductName(), products.getProductType(), usedProductAmount);
+                storingUnStoringRepository.save(storingUnStoring);
+
             }
 
             WorkOrders workOrders = workOrderRepository.getByWorkOrderId(workOrderId);
@@ -117,6 +129,12 @@ public class WorkPerformanceService {
 
             // 작업 지시의 현재 작업량 갱신
             workOrders.workCurrentQuantityAdd(currentWorkload);
+
+            LocalDateTime localDateTime = LocalDateTime.now();
+
+            // 제품 입고 등록
+            StoringUnStoring storingUnStoring = new StoringUnStoring(localDateTime, "입고", products.getProductCode(), products.getProductName(), products.getProductType(), currentWorkload);
+            storingUnStoringRepository.save(storingUnStoring);
 
             // 작업 지시의 상태를 변경
             if (workOrders.getWorkCurrentQuantity() >= 1 && workOrders.getWorkCurrentQuantity() < workOrders.getWorkTargetQuantity()) {
@@ -158,6 +176,12 @@ public class WorkPerformanceService {
             // 작업실적 삭제
             workPerformanceRepository.delete(workPerformance);
 
+            LocalDateTime localDateTime = LocalDateTime.now();
+
+            // 부품 재고 반품
+            StoringUnStoring storingUnStoring = new StoringUnStoring(localDateTime, "반품", components.getProductCode(), components.getProductName(), components.getProductType(), workPerformance.getUsedProductAmount());
+            storingUnStoringRepository.save(storingUnStoring);
+
         }
 
         // 제품 재고 차감
@@ -165,6 +189,12 @@ public class WorkPerformanceService {
 
         // 작업지시 진행량 차감
         workOrders.workCurrentQuantitySub(currentWorkload);
+
+        LocalDateTime localDateTime = LocalDateTime.now();
+
+        // 제품 재고 반품
+        StoringUnStoring storingUnStoring = new StoringUnStoring(localDateTime, "반품", products.getProductCode(), products.getProductName(), products.getProductType(), currentWorkload);
+        storingUnStoringRepository.save(storingUnStoring);
 
         // 작업 지시의 상태를 변경
         if (workOrders.getWorkCurrentQuantity() == 0) {
@@ -189,15 +219,37 @@ public class WorkPerformanceService {
 
         for (int i = 0; i < mrpCalcArr.length(); i++) {
             JSONObject obj = mrpCalcArr.getJSONObject(i);
-            String workOrderId = obj.getString("workOrderId");
-            int currentWorkload = obj.getInt("currentWorkload");
+            HashMap<String, Object> errHashMap = new HashMap<>();
 
-            if (workOrderRepository.getByWorkOrderId(workOrderId).getWorkStatus().equals("중단")) {
-                HashMap<String, Object> errHashMap = new HashMap<>();
+            String workOrderId = obj.getString("workOrderId");
+            Integer currentWorkload = obj.getInt("currentWorkload");
+
+            if (workOrderId.equals("") || workOrderId == null || currentWorkload == null) {
                 errHashMap.put("success", false);
-                errHashMap.put("message", "중단된 작업지시가 포함되어 있습니다.");
+                errHashMap.put("message", "값을 입력해주세요.");
                 errResponse.add(errHashMap);
                 return errResponse;
+            }
+
+            if (currentWorkload < 1) {
+                errHashMap.put("success", false);
+                errHashMap.put("message", "작업량이 1 미만입니다.");
+                errResponse.add(errHashMap);
+                return errResponse;
+            }
+
+            switch (workOrderRepository.getByWorkOrderId(workOrderId).getWorkStatus()) {
+                case "중단":
+                    errHashMap.put("success", false);
+                    errHashMap.put("message", "중단된 작업지시가 포함되어 있습니다.");
+                    errResponse.add(errHashMap);
+                    return errResponse;
+                case "완료":
+                case "초과":
+                    errHashMap.put("success", false);
+                    errHashMap.put("message", "완료된 작업지시가 포함되어 있습니다.");
+                    errResponse.add(errHashMap);
+                    return errResponse;
             }
 
             List<BOMs> boMsList = bomRepository.findByProductCode(workOrderRepository.getByWorkOrderId(workOrderId).getProductCode());
@@ -218,10 +270,23 @@ public class WorkPerformanceService {
     }
 
     @Transactional
-    public List<Map<String, Object>> showWorkPerformance(JSONObject obj) throws JSONException {
-    String workOrderId = obj.getString("workOrderId");
+    public List<SearchWorkPerformanceDto> showWorkPerformance(JSONObject obj) throws JSONException {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    return workPerformanceRepository.searchWorkPerformanceByWorkOrderId(workOrderId);
+        String workOrderId = null;
+        LocalDateTime startDate = null;
+        LocalDateTime endDate = null;
+
+        if (obj.has("workOrderId"))
+            workOrderId = obj.getString("workOrderId");
+        if (obj.has("startDate") && !obj.getString("startDate").equals(""))
+            startDate = LocalDateTime.parse(obj.getString("startDate"), formatter);
+        if (obj.has("endDate") && !obj.getString("endDate").equals(""))
+            endDate = LocalDateTime.parse(obj.getString("endDate"), formatter);
+
+        List<SearchWorkPerformanceDto> result = workPerformanceRepository.findBySearchOption(workOrderId, startDate, endDate).stream().distinct().collect(Collectors.toList());
+
+        return result;
     }
 
     @Transactional List<Map<String, Object>> showUsedComponent(JSONObject obj) throws JSONException {

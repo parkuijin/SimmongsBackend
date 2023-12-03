@@ -7,10 +7,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Repository
-public interface WorkPerformanceRepository extends JpaRepository<WorkPerformance, Long> {
+public interface WorkPerformanceRepository extends JpaRepository<WorkPerformance, Long>, WorkPerformanceRepositoryCustom {
 
     @Query(value = """
             select
@@ -26,7 +25,7 @@ public interface WorkPerformanceRepository extends JpaRepository<WorkPerformance
 
     @Query(value = """
             select distinct 
-                COALESCE(p.PRODUCT_NAME, 'NA') as productNamem, wp.WORK_ORDER_ID as workOrderId, wp.WORK_NUMBER as workNumber, date_format(wp.WORK_PERFORMANCE_DATE, '%Y-%m-%d') as workPerformanceDate, wp.CURRENT_WORKLOAD as currentWorkload
+                COALESCE(p.PRODUCT_NAME, 'NA') as productName, wp.WORK_ORDER_ID as workOrderId, wp.WORK_NUMBER as workNumber, date_format(wp.WORK_PERFORMANCE_DATE, '%Y-%m-%d') as workPerformanceDate, wp.CURRENT_WORKLOAD as currentWorkload
             from 
                 WORK_PERFORMANCE_TB as wp
                 left join WORK_ORDER_TB as wo on wp.WORK_ORDER_ID = wo.WORK_ORDER_ID

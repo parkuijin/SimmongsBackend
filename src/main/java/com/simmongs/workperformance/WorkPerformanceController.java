@@ -83,7 +83,7 @@ public class WorkPerformanceController {
     }
 
     @PostMapping("showWorkPerformance") // WorkOrderId로 검색하여 작업실적 전체 조회
-    public List<Map<String, Object>> ShowWorkPerformance(@RequestBody String json) throws JSONException {
+    public List<SearchWorkPerformanceDto> ShowWorkPerformance(@RequestBody String json) throws JSONException {
         JSONObject obj = new JSONObject(json);
 
         return workPerformanceService.showWorkPerformance(obj);
