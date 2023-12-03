@@ -2,6 +2,8 @@ package com.simmongs.bom;
 
 import com.simmongs.product.ProductRepository;
 import com.simmongs.product.Products;
+import com.simmongs.workorder.WorkOrderRepository;
+import com.simmongs.workorder.WorkOrders;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -9,9 +11,8 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 @Service
@@ -19,6 +20,7 @@ public class BOMService {
 
     private final BOMRepository bomRepository;
     private final ProductRepository productRepository;
+    private final WorkOrderRepository workOrderRepository;
 
     @Transactional
     public Map<String, Object> uploadBOM(JSONObject obj) throws JSONException {
@@ -75,4 +77,61 @@ public class BOMService {
         return response;
     }
 
+    @Transactional
+    public List<HashMap<String, Object>> showProductList() {
+        List<HashMap<String, Object>> response = new ArrayList<HashMap<String, Object>>();
+
+        List<Products> productsList = productRepository.findAll();
+
+        for (Products products : productsList) {
+            if (products.getProductType().equals("제품")) {
+                HashMap<String, Object> hashMap = new HashMap<>();
+                hashMap.put("productCode", products.getProductCode());
+                hashMap.put("productName", products.getProductName());
+                hashMap.put("productUnit", products.getProductUnit());
+                hashMap.put("productType", products.getProductType());
+                response.add(hashMap);
+            }
+        }
+
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> selectedProductInfo(JSONObject obj) throws JSONException {
+        Map<String, Object> response = new HashMap<>();
+
+        String productCode = obj.getString("productCode");
+        String productName = productRepository.getByProductCode(productCode).getProductName();
+        String productUnit = productRepository.getByProductCode(productCode).getProductUnit();
+
+        response.put("productName", productName);
+        response.put("productUnit", productUnit);
+
+        return response;
+    }
+
+    @Transactional
+    public Map<String, Object> deleteBOM(JSONObject obj) throws JSONException {
+        Map<String, Object> response = new HashMap<>();
+
+        String productCode = obj.getString("productCode");
+
+        if (bomRepository.findByProductCode(productCode).isEmpty()) {
+            response.put("success", false);
+            response.put("message", "BOM이 존재하지 않습니다.");
+        }
+
+        List<BOMs> bomListByProductCode = bomRepository.findByProductCode(productCode);
+        for (BOMs boms : bomListByProductCode)
+            bomRepository.delete(boms);
+
+        List<WorkOrders> workOrdersList = workOrderRepository.searchByProductCode(productCode);
+        for (WorkOrders workOrders : workOrdersList)
+            if (workOrders.getWorkStatus().equals("준비") || workOrders.getWorkStatus().equals("진행"))
+                workOrders.stopWorkOrder();
+
+        response.put("success", true);
+        return response;
+    }
 }

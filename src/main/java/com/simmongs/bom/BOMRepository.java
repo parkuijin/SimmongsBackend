@@ -11,5 +11,6 @@ public interface BOMRepository extends JpaRepository<BOMs, Long> {
     List<BOMs> findByProductCode(String productCode);
     List<BOMs> findByChildProductCode(String childProductCode);
     Optional<BOMs> findByBomId(String bomCode);
-
+    Optional<BOMs> getByProductCode(String productCode);
+    Optional<BOMs> getByChildProductCode(String childProductCode);
 }
