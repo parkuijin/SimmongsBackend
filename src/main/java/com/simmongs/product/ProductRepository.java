@@ -17,10 +17,10 @@ public interface ProductRepository extends JpaRepository<Products, Long> {
             from 
                 PRODUCT_TB
             where 
-                PRODUCT_CODE = :product_code 
-                and PRODUCT_NAME = :product_name 
-                and PRODUCT_UNIT = :product_unit 
-                and PRODUCT_TYPE = :product_type 
+                PRODUCT_CODE LIKE %:product_code%
+                and PRODUCT_NAME LIKE %:product_name%
+                and PRODUCT_UNIT Like %:product_unit% 
+                and PRODUCT_TYPE Like %:product_type% 
                 and PRODUCT_CREATION_DATE between :product_start_date and :product_end_date 
             """, nativeQuery = true)
     List<Products> findSearchProduct(

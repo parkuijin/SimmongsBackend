@@ -21,17 +21,17 @@ public class StoringUnStoringRepositoryImpl implements StoringUnStoringRepositor
 
         List<StoringUnStoring> result = jpaQueryFactory
                 .selectFrom(storingUnStoring)
-                .where(eqProductCode(productCode), containsProductName(productName), eqStoringUnstoringType(storingUnstoringType), eqProductType(productType), betweenStoringUnstoringDate(startDate, endDate))
+                .where(containsProductCode(productCode), containsProductName(productName), eqStoringUnstoringType(storingUnstoringType), eqProductType(productType), betweenStoringUnstoringDate(startDate, endDate))
                 .fetch();
 
         return result;
     }
 
-    private BooleanExpression eqProductCode(String productCode) {
+    private BooleanExpression containsProductCode(String productCode) {
         if (productCode == null || productCode.isEmpty()) {
             return null;
         }
-        return storingUnStoring.productCode.eq(productCode);
+        return storingUnStoring.productCode.contains(productCode);
     }
 
     private BooleanExpression containsProductName(String productName) {
