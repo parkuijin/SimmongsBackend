@@ -18,10 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -65,6 +63,7 @@ public class ProductService {
     @Transactional
     public Map<String, Object> deleteProduct(JSONObject obj){
         Map<String, Object> response = new HashMap<>();
+        List<String> existingProductCodesList = new ArrayList<>();
 
         String productCode = obj.getString("productCode");
 
@@ -75,31 +74,54 @@ public class ProductService {
         }
 
         // BOM 테이블에서 해당되는 값 삭제
-        List<BOMs> boms = bomRepository.findByProductCode(productCode);
-        for( BOMs bom : boms )
-            bomRepository.delete(bom);
+        if (productRepository.findByProductCode(productCode).get().getProductType().equals("부품")) {
+            if (!bomRepository.findByChildProductCode(productCode).isEmpty()) {
+                List<BOMs> bomListByChildProduct = bomRepository.findByChildProductCode(productCode);
+                for( BOMs bom : bomListByChildProduct ) {
+                    existingProductCodesList.add(bom.getProductCode());
+                    bomRepository.delete(bom);
+                }
+            }
+            for (int l=0; l<existingProductCodesList.size(); l++) {
+                List<BOMs> boMListByProductCode = bomRepository.findByProductCode(existingProductCodesList.get(l));
+                for (BOMs bom : boMListByProductCode)
+                    bomRepository.delete(bom);
+            }
+        } else if (productRepository.findByProductCode(productCode).get().getProductType().equals("제품")) {
+            if (!bomRepository.findByProductCode(productCode).isEmpty()) {
+                List<BOMs> bomListByProductCode = bomRepository.findByProductCode(productCode);
+                for (BOMs bom : bomListByProductCode) {
+                    existingProductCodesList.add(bom.getProductCode());
+                    bomRepository.delete(bom);
+                }
+            }
+        }
 
-        List<BOMs> boms2 = bomRepository.findByChildProductCode(productCode);
-        for( BOMs bom : boms2 )
-            bomRepository.delete(bom);
+        existingProductCodesList.stream().distinct().collect(Collectors.toList());
+
+        for (int i=0; i<existingProductCodesList.size(); i++) {
+            String existingProductCode = existingProductCodesList.get(i);
+
+            List<WorkOrders> workOrdersList = workOrderRepository.searchByProductCode(existingProductCode);
+            for (int j=0; j<workOrdersList.size(); j++) {
+                WorkOrders workOrders = workOrdersList.get(j);
+
+                // 준비, 진행 상태의 작업지시를 중단상태로 변경
+                if (workOrders.getWorkStatus().equals("준비") || workOrders.getWorkStatus().equals("진행")) {
+                    workOrders.stopWorkOrder();
+
+                    // 중단된 작업지시에 해당되는 MRP를 삭제
+                    List<MRPs> mrps = mrpRepository.findByWorkOrderId(workOrders.getWorkOrderId());
+                    for (int k=0; k<mrps.size(); k++)
+                        mrpRepository.delete(mrps.get(k));
+                }
+            }
+        }
 
         // Product 테이블에서 해당되는 값 삭제
         Optional<Products> products = productRepository.findByProductCode(productCode);
         if( products.isPresent() )
             productRepository.delete(products.get());
-
-        List<WorkOrders> workOrdersList = workOrderRepository.searchByProductCode(productCode);
-        for (int i=0; i<workOrdersList.size(); i++) {
-            WorkOrders workOrders = workOrdersList.get(i);
-
-            // WorkOrder 테이블에서 해당되는 값을 중단상태로 변경
-            workOrders.stopWorkOrder();
-
-            // 중단된 작업지시에 해당되는 MRP를 삭제
-            List<MRPs> mrps = mrpRepository.findByWorkOrderId(workOrders.getWorkOrderId());
-            for (int j=0; j<mrps.size(); j++)
-                mrpRepository.delete(mrps.get(j));
-        }
 
         response.put("success", true);
         return response;
@@ -111,29 +133,42 @@ public class ProductService {
         Map<String, Object> response = new HashMap<>();
         LocalDateTime productCreationDate = LocalDateTime.now();
 
-        String productType = obj.getString("productType");
-        String productCode = obj.getString("productCode");
-        String productName = obj.getString("productName");
-        String productUnit = obj.getString("productUnit");
-        Integer productAmount = obj.getInt("productAmount");
+        JSONArray productList = obj.getJSONArray("productList");
 
-        // ProductCode 중복 확인
-        Optional<Products> CodeCheck = productRepository.findByProductCode(productCode);
-        if (CodeCheck.isPresent()) {
-            if (productType.equals("제품")) {
+        for (int i=0; i<productList.length(); i++) {
+
+            JSONObject product = productList.getJSONObject(i);
+
+            String productType = product.getString("productType");
+            String productCode = product.getString("productCode");
+            String productName = product.getString("productName").trim();
+            String productUnit = product.getString("productUnit");
+            Integer productAmount = product.getInt("productAmount");
+
+            if (productType.equals("") || productCode.equals("") || productName.equals("") || productUnit.equals("") || productAmount == null) {
                 response.put("success", false);
-                response.put("message", "제품 코드가 이미 존재합니다.");
-                return response;
-            } else if (productType.equals("부품")) {
-                response.put("success", false);
-                response.put("message", "부품 코드가 이미 존재합니다.");
+                response.put("message", "값을 입력해주세요.");
                 return response;
             }
-        }
 
-        // Product 등록
-        Products products = new Products(productCode, productName, productAmount, productUnit, productType, productCreationDate);
-        productRepository.save(products);
+            // ProductCode 중복 확인
+            Optional<Products> CodeCheck = productRepository.findByProductCode(productCode);
+            if (CodeCheck.isPresent()) {
+                if (productType.equals("제품")) {
+                    response.put("success", false);
+                    response.put("message", "제품 코드가 이미 존재합니다.");
+                    return response;
+                } else if (productType.equals("부품")) {
+                    response.put("success", false);
+                    response.put("message", "부품 코드가 이미 존재합니다.");
+                    return response;
+                }
+            }
+
+            // Product 등록
+            Products products = new Products(productCode, productName, productAmount, productUnit, productType, productCreationDate);
+            productRepository.save(products);
+        }
 
         response.put("success", true);
         return response;
