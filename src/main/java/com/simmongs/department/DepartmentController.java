@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -15,22 +16,25 @@ import java.util.List;
 public class DepartmentController {
 
     private final DepartmentRepository departmentRepository;
+    private final DepartmentService departmentService;
 
     @PostMapping("registration") // 부서 정보 등록
-    public Departments DepartmentRegistration(@RequestBody String json) throws JSONException {
-
+    public Map<String, Object> DepartmentRegistration(@RequestBody String json) throws JSONException {
         JSONObject obj = new JSONObject(json);
-        String departmentName = obj.getString("departmentName");
 
-        Departments departments = new Departments(departmentName);
-        departmentRepository.save(departments);
-
-        return departments;
+        return departmentService.DepartmentRegistration(obj);
     }
 
     @GetMapping("showAll") // 부서 정보 조회
     public List<Departments> ShowAllDepartments(){
         return departmentRepository.findAll();
+    }
+
+    @DeleteMapping("delete")
+    public Map<String, Object> DeleteDepartment(@RequestBody String json) throws JSONException {
+        JSONObject obj = new JSONObject(json);
+
+        return departmentService.DeleteDepartment(obj);
     }
 
 }
