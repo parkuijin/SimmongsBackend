@@ -31,6 +31,7 @@ public class DepartmentService {
             String departmentName = department.getString("departmentName");
             List<WorkOrders> workOrdersList = workOrderRepository.findByDepartmentName(departmentName);
 
+            // 삭제하려는 부서에서 진행 중인 작업지시가 있는지 확인
             for (WorkOrders workOrders : workOrdersList) {
                 if (workOrders.getWorkStatus().equals("진행")) {
                     response.put("success", false);
@@ -39,10 +40,14 @@ public class DepartmentService {
                 }
             }
 
-            /*for (WorkOrders workOrders : workOrdersList) {
-                workOrders.stopWorkOrder();
-            }*/
+            // 준비 중인 작업지시는 중단으로 변경
+            for (WorkOrders workOrders : workOrdersList) {
+                if (workOrders.getWorkStatus().equals("준비")) {
+                    workOrders.stopWorkOrder();
+                }
+            }
 
+            // 부서 삭제
             Departments departments = departmentRepository.getByDepartmentName(departmentName);
             departmentRepository.delete(departments);
         }
